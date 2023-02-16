@@ -16,16 +16,16 @@
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
 
-import os
+# import os
 import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
-import matplotlib.patches as patches
-from skimage import io
+# import matplotlib
+# import matplotlib.pyplot as plt
+# import matplotlib.patches as patches
+# from skimage import io
 
-import glob
-import time
-import argparse
+# import glob
+# import time
+# import argparse
 from filterpy.kalman import KalmanFilter
 
 

@@ -1,56 +1,36 @@
 # CollisionAvoidanceService
 
-
-# Forward collision warning
-
 The algortithm detects and tracks objects in video using SORT algorithm. For all objects, their projection to road plane is calculated (i.e. camera calibration is necessary). Location of objects on the road plane is filtered by Kalman Filter - whichgibes us the ability to predict future movement of objects. If the future path of an object strikes warning zone, alarm event is emited. The event contains detailed description of the ofensive behaviour, like location on screen and in the world, relative speed and direction of object, and time of entering the warning zone.
 
 ## Inputs
 
-* Video stream with knwon and stable FPS
+* Video stream with known and stable FPS
 * Intrinsic and extrinsic camera calibration
 * Configuration parameters of the FCW algorithm
 
+Example configurations can be found in `config` directory.
 
-This is an example of camera calibration config file
+## The algorithm description
 
-```yaml
-# Width and height of the image
-image_size: [2064, 1544]
+TODO
 
-# 3x3 matrix K measured with OpenCV calibration procedure
-K: [
-  [1240,  0.0, 988],
-  [ 0.0, 1237, 762],
-  [ 0.0,  0.0, 1.0]
-]
+## Network Application for 5G-Era
 
-# Fisheye distortion coeficients
-D: [-0.069,0,0,0]
+TODO
 
-# Extrinsic parameters estimated by user
-# Horizon line is given as (x1, y1, x2, y2) - two points on horizon line
-# with the first point (x1,y1) pointing towards vanishing point in the
-# direction of vehicle movement.
-horizon: [2018, 166, 0, 166]
+## Notes
 
-# View direction can be '+x' (forward facing camera) or '-x' (backward facing camera)
-view_direction: "+x"
+We use slightly modified version of SORT tracker from [abewley](https://github.com/abewley/sort) gitub repository.
 
-# Height of camera above the ground in meters
-height: 1.7
-```
+## Next steps
 
-The parameters of algorithm are specified in `YAML` file.
-
-```yaml
-# Object path prediction to the future
-prediction_time: 1  # [s]
-prediction_interval: 0.1  # [s]
-
-warning_zone_length: 15  # [m]
-warning_zone_width: 3 # [m]
-```
-
-
-
+* [ ] Horizon in config must be given in distorted coordinates (not undistorted)
+* [ ] Translation vector must be given as full `xyz` not just `z`
+* [ ] Loading algorithm configuration from `yaml` file
+* [ ] Detector initialization from config
+* [ ] Pass list of classes to detector (now its fixed)
+* [ ] Initi SORT tracker from config
+* [ ] Refactor to make a python package from core algorithm
+* [ ] Update README to match configuration formats, and add description of the algorithm
+* [ ] Wrap to 5G-Era interface
+* [ ] Test and deploy

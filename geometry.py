@@ -32,30 +32,6 @@ class Camera:
         return Camera(d["image_size"], K, D, R, T)
 
 
-
-# def load_camera_config(f:Path):
-#     config = yaml.safe_load(f.open())
-    
-#     K = np.eye(4)
-#     K[:3,:3] = np.array(config["K"], "f")
-    
-#     R = np.eye(4)    
-#     R[:3,:3] = estimate_R(config["K"], config["horizon"], "x")
-
-#     T = translation_matrix([0,0,config.get("height", 1)])
-
-#     P = K @ np.linalg.inv(T @ R)
-
-#     config["D"] = np.array(config["D"], "f")
-#     config["K"] = K
-#     config["P"] = P
-#     config["T"] = T
-#     config["R"] = R
-#     config["RT"] = np.linalg.inv(T @ R)
-
-#     return config
-
-
 def estimate_R(K, h, view_direction="x"):
     """
     Estimate rotation matrix from horizon observation
