@@ -1,0 +1,15 @@
+# This is an example of FCW algorithm configuration
+
+
+# Configuration of detector
+detector:
+  model: yolov5n6
+  max_image_size: 320
+  min_score: 0.25
+  classes:  # List of classes to detect
+    - car
+    - bus
+    - truck
+    - person
+
+# TODO - config for ForwadCollisionGuard

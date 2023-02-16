@@ -1,0 +1,30 @@
+# This is an example configuration of camera. This parameters must be provided
+# in order to make the collision avoidance work properly.
+
+
+# Image resolution
+image_size: [962, 720]  # (w,h) in pixels
+
+
+# Intrinsic parameters as given by OpenCV calibration
+
+# 3x3 Camera matrix
+K: [
+  [1100,0,424],
+  [0,1100,240],
+  [0,0,1]
+]
+
+# Fisheye Distortion parameters
+D: [-0.1,0,0,0]
+
+
+# Extrinsic parameters
+
+# Observed horizon line in undistorted image 
+# (x1,y1,x2,y2) where (x1,y1) is a vanishing point in vehicle movement direction
+horizon: [486,380,1000,380]   # [px]
+view_direction: x  # 'x' for forward view or '-x' for rear view
+
+# Height of camera above ground
+height: 1.5  #  [m]
