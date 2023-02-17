@@ -140,7 +140,7 @@ class ForwardCollisionGuard:
     
     def ofsenses(self):
         """
-        Check future paths of objects and 
+        Check future paths of objects and filter dangerous ones
         """
         # Predict future path of world trackers for nearby objects
         future_path = {
@@ -151,22 +151,16 @@ class ForwardCollisionGuard:
         
         ret = dict()
         for tid, path in future_path.items():
-            crosses_safety_zone = path.intersects(self.safety_zone)
-            stays_in_safety_zone = self.safety_zone.contains(Point(path.coords[-1]))
+            crosses_danger_zone = path.intersects(self.danger_zone)
+            stays_in_danger_zone = self.danger_zone.contains(Point(path.coords[-1]))
             ofending_object = self.objects[tid]
-            if crosses_safety_zone or stays_in_safety_zone:
+            if crosses_danger_zone or stays_in_danger_zone:
                 ret[tid] = (ofending_object,
-                        crosses_safety_zone,
-                        stays_in_safety_zone,
+                        crosses_danger_zone,
+                        stays_in_danger_zone,
                     )
         
         return ret
-
-
-
-
-
-
 
 
 ###########        
