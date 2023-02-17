@@ -13,12 +13,15 @@ from yolo_detector import YOLODetector
 
 from PIL import Image, ImageDraw, ImageFont
 
-
-
 # os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 
-cfg_file = Path("videos/video2.yaml")
-video_file = Path("videos/video2.mp4").as_posix()
+# Configuration of the algorithm
+config = Path("config/config.yaml")
+
+# Camera settings - specific for the particular input
+camera_config = Path("videos/video3.yaml")
+video_file = Path("videos/video3.mp4").as_posix()
+
 # video_file = "rtp://localhost:1234/"
 
 
@@ -78,34 +81,38 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
     log = logging.info("Starting Forward Collision Guard")
 
-    # Load model
-    detector = YOLODetector("yolov5l6", max_size=480)
-    detector.model.conf = 0.3
+    logging.info("Loading configuration file {cfg}".format(cfg=config))
+    config_dict = yaml.safe_load(config.open())
+    
+    # Init object detector
+    detector = YOLODetector.from_dict(config_dict.get("detector", {}))
+
+    # Init image tracker
+    logging.info("Initializing image tracker")
+    tracker = Sort.from_dict(config_dict.get("tracker", {}))
+
+    # Init collision guard
+    logging.info("Initializing Forward warning")
+    guard = ForwardCollisionGuard.from_dict(config_dict.get("fcw", {}))
+    
+    # output = cv2.VideoWriter("out.mp4", cv2.VideoWriter_fourcc(*"MP4V"), fps, (width, height))
 
     # Load camera calibration
-    logging.info("Loading configuration {cfg}".format(cfg=cfg_file))
-    config = yaml.safe_load(cfg_file.open())
-    camera = Camera.from_dict(config)
+    logging.info("Loading camera configuration {cfg}".format(cfg=camera_config))
+    camera_dict = yaml.safe_load(camera_config.open())
+    camera = Camera.from_dict(camera_dict)
 
     # Open video
     logging.info("Openning video {vid}".format(vid=video_file))
     video = cv2.VideoCapture(video_file, cv2.CAP_FFMPEG)
     fps = video.get(cv2.CAP_PROP_FPS)
-    dt = 1/fps
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     shape = height, width
-    logging.info("Video {W}x{H}, {fps} FPS, dt={dt} ms".format(W=width, H=height, fps=fps, dt=round(1000*dt,1)))
-    
-    # Init image tracker
-    logging.info("Initializing image tracker")
-    tracker = Sort(min_hits=2, max_age=4, iou_threshold=0.2)
+    logging.info("Video {W}x{H}, {fps} FPS".format(W=width, H=height, fps=fps))
 
-    # Init collision guard
-    guard = ForwardCollisionGuard(dt)
-    
-    output = cv2.VideoWriter("out.mp4", cv2.VideoWriter_fourcc(*"MP4V"), fps, (width, height))
-                             
+    guard.dt = 1/fps  # Finish setup if the guard
+
     # FCW Loop
     while True:
         ret, img = video.read()
@@ -115,11 +122,6 @@ if __name__ == "__main__":
 
         # Detect object in image
         dets = detector.detect(cv2.GaussianBlur(img, (5,5), 1))
-        # Filter unsuitable
-        dets = list(filter(
-            lambda d: d.is_in_frame(shape, margin=10) and d.geometry.area > 2000,
-            dets
-        ))
         # Get bounding boxes as numpy array
         dets = detections_to_numpy(dets)
         # Update state of image trackers
@@ -134,17 +136,15 @@ if __name__ == "__main__":
         # Update state of objects in world
         guard.update(ref_pt)
         # Get list of current offenses
-        offending_objects = guard.offsenses()
+        offending_objects = guard.ofsenses()
 
         # Vizialization
-
-
         base = Image.fromarray(img[...,::-1], "RGB").convert("RGBA")
         objects_image = Image.new("RGBA", base.size, (255, 255, 255, 0))
         osd_image = Image.new("RGBA", base.size, (255, 255, 255, 0))
 
         osd_draw = ImageDraw.Draw(osd_image)
-        draw_horizon(osd_draw, config["horizon"])
+        draw_horizon(osd_draw, camera_dict["horizon"])
 
 
         objects_draw = ImageDraw.Draw(objects_image)
@@ -163,6 +163,6 @@ if __name__ == "__main__":
         cv_image = np.array(out)[...,::-1]
         cv2.imshow("FCW", cv_image)
         cv2.waitKey(1)
-        output.write(cv_image)
+        # output.write(cv_image)
 
-    output.release()
+    # output.release()
