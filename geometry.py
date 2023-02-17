@@ -27,7 +27,7 @@ class Camera:
         view_direction = d.get("view_direction", "x")
         R = np.eye(4)
         R[:3,:3] = estimate_R(d["K"], d["horizon"], view_direction)
-        T = translation_matrix([0,0,d.get("height",1)])
+        T = translation_matrix(d.get("location", [0,0,1]))
         # P = K @ np.linalg.inv(T @ R)
         return Camera(d["image_size"], K, D, R, T)
 

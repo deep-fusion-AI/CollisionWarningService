@@ -26,5 +26,5 @@ D: [-0.1,0,0,0]
 horizon: [486,380,1000,380]   # [px]
 view_direction: x  # 'x' for forward view or '-x' for rear view
 
-# Height of camera above ground
-height: 1.5  #  [m]
+# Location of camera in vehicle space
+location: [0, 0, 1.5]   # X = back->front, Y = right->left, Z = down->up in vehicle space
