@@ -10,6 +10,20 @@ detector:
     - car
     - bus
     - truck
+    - bicycle
+    - motorcycle
     - person
+    # We can add more classes like dog, cow etc...
 
-# TODO - config for ForwadCollisionGuard
+
+# Example configuration of warning
+fcw:
+  safety_zone: 25  # [m] consider objects in this radius
+  danger_zone: [  # Polygon defining danger zone around the vehicle [(x,y), ...]
+    [ 0, 1],
+    [10, 1],
+    [10,-1],
+    [ 0,-1]
+  ]
+  prediction_length: 1  # [s] path prediction time
+  prediction_step: 0.2  # [s] integration step for prediction

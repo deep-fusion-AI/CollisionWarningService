@@ -4,7 +4,7 @@ from typing import Dict
 import numpy as np
 from filterpy.common import Q_discrete_white_noise
 from filterpy.kalman import KalmanFilter
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, Polygon
 
 from geometry import *
 
@@ -98,12 +98,28 @@ def get_reference_points(trackers:dict, camera:Camera):
 class ForwardCollisionGuard:
     def __init__(
             self,
-            dt:float,
+            danger_zone:Polygon,
+            safety_radius:float = 25,
+            prediction_length:float = 1,
+            prediction_step:float = 0.1,
+            dt:float = 1,
         ):
         self.dt = dt
         self.objects:Dict[int,PointWorldObject] = dict()
-        self.safety_radius = 50  # m
-        self.safety_zone = LineString([[0,0],[15,0]]).buffer(3)
+        self.danger_zone = danger_zone
+        self.safety_radius = safety_radius  # m
+        self.prediction_length = prediction_length
+        self.prediction_step = prediction_step
+
+    @staticmethod
+    def from_dict(d):
+        zone = Polygon(d.get("danger_zone"))
+        return ForwardCollisionGuard(
+            danger_zone=zone,
+            safety_radius=d.get("safety_radius", 30),
+            prediction_length=d.get("prediction_length", 1),
+            prediction_step=d.get("prediction_step", 0.1),
+        )
 
     def update(self, ref_points:dict):
         """
@@ -122,13 +138,13 @@ class ForwardCollisionGuard:
             else:
                 self.objects[tid].update(ref_points[tid][:2])
     
-    def offsenses(self):
+    def ofsenses(self):
         """
         Check future paths of objects and 
         """
         # Predict future path of world trackers for nearby objects
         future_path = {
-            tid: object.future_path()
+            tid: object.future_path(self.prediction_length, self.prediction_step)
             for tid, object in self.objects.items()
             if object.distance() < self.safety_radius
         }  # tid -> LineString in vehicle coordinates
@@ -137,9 +153,9 @@ class ForwardCollisionGuard:
         for tid, path in future_path.items():
             crosses_safety_zone = path.intersects(self.safety_zone)
             stays_in_safety_zone = self.safety_zone.contains(Point(path.coords[-1]))
-            offending_object = self.objects[tid]
+            ofending_object = self.objects[tid]
             if crosses_safety_zone or stays_in_safety_zone:
-                ret[tid] = (offending_object,
+                ret[tid] = (ofending_object,
                         crosses_safety_zone,
                         stays_in_safety_zone,
                     )
