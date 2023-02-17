@@ -15,6 +15,11 @@ detector:
     - person
     # We can add more classes like dog, cow etc...
 
+tracker:
+  min_hits: 2
+  max_age: 4
+  iou: 0.3
+
 
 # Example configuration of warning
 fcw:

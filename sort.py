@@ -204,6 +204,14 @@ class Sort:
     self.trackers = []
     self.frame_count = 0
 
+  @staticmethod
+  def from_dict(d:dict):
+    return Sort(
+      max_age = d.get("max_age", 1),
+      min_hits = d.get("min_hits", 3),
+      iou_threshold = d.get("iou", 0.3),
+    )
+
   def update(self, dets=np.empty((0, 5))):
     """
     Params:
