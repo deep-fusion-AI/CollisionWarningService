@@ -6,8 +6,9 @@ Roman Juranek <r.juranek@cognitechna.cz>
 
 ---
 
-TODO
-* Configure class names in constructor - list of names
+List of available classes can be found here:
+https://github.com/ultralytics/yolov5/blob/master/data/coco128.yaml
+
 
 """
 
@@ -15,19 +16,33 @@ import cv2
 import numpy as np
 import torch
 from shapely.geometry import box
+from typing import Iterable
 
 from detection import ObjectObservation
 
-_traffic_classes = {0, 1, 2, 3, 5, 7, 16}
-
 
 class YOLODetector:
-    def __init__(self, model: str = "yolov5l6", max_size: int = 640):
+    default_classes = [
+        "person", "bicycle", "car", "motorcycle", "bus", "truck"
+    ]
+
+    def __init__(self, model: str = "yolov5l6", max_size: int = 640, classes:Iterable[str]=None):
         self.model = torch.hub.load("ultralytics/yolov5", model, pretrained=True)
-        self.model.agnostic = True  # NMS will be done as class-agnostic
-        self.model.classes = list(_traffic_classes)
+        self.model.agnostic = False
+        self.model.iou = 0.7
+        classes = classes or YOLODetector.default_classes
+        class_names = self.model.names
+        self.model.classes = list(map(class_names.index, filter(lambda name: name in class_names, classes)))
         self.model.conf = 0.6
         self.max_size = max_size
+
+    @staticmethod
+    def from_dict(d:dict) -> "YOLODetector":
+        return YOLODetector(
+            model=d.get("model", "yolov5n6"),
+            max_size=d.get("max_size", 1024),
+            classes=d.get("classes")
+        )
 
     def detect(self, image):
         h,w = image.shape[:2]
