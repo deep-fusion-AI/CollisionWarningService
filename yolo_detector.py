@@ -26,22 +26,23 @@ class YOLODetector:
         "person", "bicycle", "car", "motorcycle", "bus", "truck"
     ]
 
-    def __init__(self, model: str = "yolov5l6", max_size: int = 640, classes:Iterable[str]=None):
+    def __init__(self, model: str = "yolov5l6", classes:Iterable[str]=None, max_size: int = 640, min_score:float = 0.3):
         self.model = torch.hub.load("ultralytics/yolov5", model, pretrained=True)
         self.model.agnostic = False
         self.model.iou = 0.7
         classes = classes or YOLODetector.default_classes
         class_names = self.model.names
         self.model.classes = list(map(class_names.index, filter(lambda name: name in class_names, classes)))
-        self.model.conf = 0.6
+        self.model.conf = min_score
         self.max_size = max_size
 
     @staticmethod
     def from_dict(d:dict) -> "YOLODetector":
         return YOLODetector(
             model=d.get("model", "yolov5n6"),
+            classes=d.get("classes"),
             max_size=d.get("max_size", 1024),
-            classes=d.get("classes")
+            min_score=d.get("min_score", 0.3),
         )
 
     def detect(self, image):
