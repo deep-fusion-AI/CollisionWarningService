@@ -28,7 +28,7 @@ class ObjectObservation:
         return (x1 > margin) and (x2 < (w-margin)) and (y1 > margin) and (y2 < (h-margin))
 
 
-def detections_to_numpy(dets: Iterable[ObjectObservation]):
-    if dets:
-        return np.vstack([d.numpy() for d in dets])
-    return np.empty((0,5))
+def detections_to_numpy(dets: Iterable[ObjectObservation]) -> np.ndarray:
+    dets = [d.numpy() for d in dets]
+    dets.append(np.empty((0,5)))  # vstack does not accept empty list - we add empty array so it does not fail
+    return np.vstack(dets)

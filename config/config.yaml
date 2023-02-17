@@ -1,11 +1,12 @@
 # This is an example of FCW algorithm configuration
 
-
 # Configuration of detector
 detector:
-  model: yolov5n6
-  max_image_size: 320
-  min_score: 0.25
+  model: yolov5l6
+  max_image_size: 480
+  min_score: 0.3
+  filter_in_frame: True
+  min_area: 2000
   classes:  # List of classes to detect
     - car
     - bus
@@ -15,6 +16,8 @@ detector:
     - person
     # We can add more classes like dog, cow etc...
 
+
+# Configuration of SORT tracker
 tracker:
   min_hits: 2
   max_age: 4
@@ -23,7 +26,7 @@ tracker:
 
 # Example configuration of warning
 fcw:
-  safety_zone: 25  # [m] consider objects in this radius
+  safety_zone: 50  # [m] consider objects in this radius
   danger_zone: [  # Polygon defining danger zone around the vehicle [(x,y), ...]
     [ 0, 1],
     [10, 1],

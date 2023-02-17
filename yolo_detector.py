@@ -21,12 +21,20 @@ from typing import Iterable
 from detection import ObjectObservation
 
 
+
 class YOLODetector:
     default_classes = [
         "person", "bicycle", "car", "motorcycle", "bus", "truck"
     ]
 
-    def __init__(self, model: str = "yolov5l6", classes:Iterable[str]=None, max_size: int = 640, min_score:float = 0.3):
+    def __init__(self,
+                 model: str = "yolov5l6",
+                 classes:Iterable[str] = None,
+                 max_size: int = 640,
+                 min_score:float = 0.3,
+                 filter_in_frame:bool = True,
+                 min_area:float = None
+                 ):
         self.model = torch.hub.load("ultralytics/yolov5", model, pretrained=True)
         self.model.agnostic = False
         self.model.iou = 0.7
@@ -35,6 +43,8 @@ class YOLODetector:
         self.model.classes = list(map(class_names.index, filter(lambda name: name in class_names, classes)))
         self.model.conf = min_score
         self.max_size = max_size
+        self.filter_in_frame = filter_in_frame
+        self.min_area = min_area
 
     @staticmethod
     def from_dict(d:dict) -> "YOLODetector":
@@ -43,6 +53,8 @@ class YOLODetector:
             classes=d.get("classes"),
             max_size=d.get("max_size", 1024),
             min_score=d.get("min_score", 0.3),
+            filter_in_frame=d.get("filter_in_frame", False),
+            min_area=d.get("min_area"),
         )
 
     def detect(self, image):
@@ -63,13 +75,27 @@ class YOLODetector:
         labels = labels.ravel().astype(np.int).tolist()
         scores = scores.ravel().tolist()
 
+        # Convert coords to shapely Polygon
         geometries = list(map(lambda x: box(*x), rects * scale))
         
-        return [
+        # Generator of object instances
+        all_dets = (
             ObjectObservation( 
                 geometry=geometry,
                 score=score,
                 label=label,
             )
             for geometry, label, score in zip(geometries, labels, scores)
-        ]
+        )
+
+        # Filter objects that are in the frame
+        if self.filter_in_frame:
+            is_in_frame = lambda d: d.is_in_frame((h,w), margin=10)
+            all_dets = filter(is_in_frame, all_dets)
+
+        # Filter objects with suficient size
+        if self.min_area is not None and self.min_area > 0:
+            sufficient_size = lambda d: d.geometry.area > self.min_area
+            all_dets = filter(sufficient_size, all_dets)
+
+        return list(all_dets)
