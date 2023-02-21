@@ -17,11 +17,6 @@ class ObjectObservation:
     def numpy(self):
         return np.atleast_2d(self.bounds() + (self.score,))
     
-    def reference_point(self):
-        """Center of bottom edge"""
-        x1, _, x2, y2 = self.bounds()
-        return Point(0.5 * (x1+x2), y2)
-    
     def is_in_frame(self, shape, margin=5):
         h,w = shape
         x1, y1, x2, y2 = self.bounds()
