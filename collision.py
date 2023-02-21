@@ -4,7 +4,7 @@ from typing import Dict
 import numpy as np
 from filterpy.common import Q_discrete_white_noise
 from filterpy.kalman import KalmanFilter
-from shapely.geometry import LineString, Point, Polygon
+from shapely.geometry import LineString, Point, Polygon, box
 
 from geometry import *
 
@@ -53,13 +53,16 @@ class PointWorldObject:
         self.xy = np.dot(self.kf.H, self.kf.x).T[0]
         self.vxvy = np.dot(np.array([[0,1,0,0,0,0],[0,0,0,0,1,0]]), self.kf.x).T[0]
 
+    @property
     def location(self):
         return self.xy
 
+    @property
     def distance(self):
-        if self.xy is None: return 0
+        if self.xy is None: return np.inf
         return np.linalg.norm(self.xy)
 
+    @property
     def relative_speed(self):
         if self.vxvy is None: return 0
         return np.linalg.norm(self.vxvy)
@@ -99,6 +102,7 @@ class ForwardCollisionGuard:
     def __init__(
             self,
             danger_zone:Polygon,
+            vehcile_zone:Polygon,
             safety_radius:float = 25,
             prediction_length:float = 1,
             prediction_step:float = 0.1,
@@ -107,6 +111,7 @@ class ForwardCollisionGuard:
         self.dt = dt
         self.objects:Dict[int,PointWorldObject] = dict()
         self.danger_zone = danger_zone
+        self.vehicle_zone = vehcile_zone
         self.safety_radius = safety_radius  # m
         self.prediction_length = prediction_length
         self.prediction_step = prediction_step
@@ -114,8 +119,12 @@ class ForwardCollisionGuard:
     @staticmethod
     def from_dict(d):
         zone = Polygon(d.get("danger_zone"))
+        length, width = d.get("vehcile_length",4), d.get("vehicle_width",1.8)
+        vehicle_zone = box(-length/2, -width/2, length/2, width/2).buffer(0.5, resolution=4)
+        
         return ForwardCollisionGuard(
             danger_zone=zone,
+            vehcile_zone=vehicle_zone,
             safety_radius=d.get("safety_radius", 30),
             prediction_length=d.get("prediction_length", 1),
             prediction_step=d.get("prediction_step", 0.1),
@@ -138,29 +147,15 @@ class ForwardCollisionGuard:
             else:
                 self.objects[tid].update(ref_points[tid][:2])
     
-    def ofsenses(self):
+    def dangerous_objects(self):
         """
         Check future paths of objects and filter dangerous ones
         """
-        # Predict future path of world trackers for nearby objects
-        future_path = {
-            tid: object.future_path(self.prediction_length, self.prediction_step)
-            for tid, object in self.objects.items()
-            if object.distance() < self.safety_radius
-        }  # tid -> LineString in vehicle coordinates
-        
-        ret = dict()
-        for tid, path in future_path.items():
-            crosses_danger_zone = path.intersects(self.danger_zone)
-            stays_in_danger_zone = self.danger_zone.contains(Point(path.coords[-1]))
-            ofending_object = self.objects[tid]
-            if crosses_danger_zone or stays_in_danger_zone:
-                ret[tid] = (ofending_object,
-                        crosses_danger_zone,
-                        stays_in_danger_zone,
-                    )
-        
-        return ret
+        return {
+            tid: obj for tid, obj in self.objects.items()
+            if obj.distance < self.safety_radius and
+               obj.future_path(self.prediction_length, self.prediction_step).intersects(self.danger_zone)
+        }
 
 
 ###########        

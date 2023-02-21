@@ -46,7 +46,7 @@ def draw_tracked_objects(d:ImageDraw.ImageDraw, tracked_objects):
         tw, th = font.getsize(label, stroke_width=1)
         tw, th = tw+4, th+4
         d.rectangle((x1,y1-th,x1+tw,y1), fill=(0,0,0))
-        d.text((x1+3,y1-th+2), label, fill=(255,255,255), font=font, stroke_width=1)
+        d.text((x1+3,y1-th+2), label, fill=(255,255,255), font=font, stroke_width=0)
 
 
 # def undistort(img, camera:Camera):
@@ -136,7 +136,7 @@ if __name__ == "__main__":
         # Update state of objects in world
         guard.update(ref_pt)
         # Get list of current offenses
-        offending_objects = guard.ofsenses()
+        dangerous_objects = guard.dangerous_objects()
 
         # Vizialization
         base = Image.fromarray(img[...,::-1], "RGB").convert("RGBA")
@@ -150,12 +150,13 @@ if __name__ == "__main__":
         objects_draw = ImageDraw.Draw(objects_image)
         draw_tracked_objects(objects_draw, tracked_objects)
 
-        for tid, (o,_,_) in offending_objects.items():
+        for tid, o in dangerous_objects.items():
             x1,y1,x2,y2 = tracked_objects[tid].get_state()[0]
             objects_draw.rectangle([x1,y1,x2,y2], outline=(255,0,0), width=2)
-
-            info=f"{o.distance():.0f} m"
-            objects_draw.text((0.5*(x1+x2), 0.5*(y1+y2)), info, align="center", font=font, stroke_fill=(255,255,255), stroke_width=2, fill=(0,0,0))
+            print(tid, o.location)
+            dist = Point(o.location).distance(guard.vehicle_zone)
+            info=f"{dist:.1f} m"
+            objects_draw.text((0.5*(x1+x2), 0.5*(y1+y2)), info, align="center", font=font, stroke_fill=(255,255,255), stroke_width=1, fill=(0,0,0))
         
         display = Image.alpha_composite(objects_image, osd_image)
         out = Image.alpha_composite(base, display).convert("RGB")

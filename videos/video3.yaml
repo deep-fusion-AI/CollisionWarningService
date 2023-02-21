@@ -1,0 +1,16 @@
+# Intrinsic parameters
+image_size: [962, 720]  # (w,h)
+
+K: [
+  [1100,0,424],
+  [0,1100,240],
+  [0,0,1]
+]
+
+# Distortion parameters
+D: [-0.1, 0, 0, 0]
+
+# Extrinsic parameters - camera orientation and location in vehicle space
+horizon: [486,380,1000,380]
+view_direction: x
+location: [0.5, 0, 1.3]
