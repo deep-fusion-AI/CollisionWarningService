@@ -130,4 +130,6 @@ dmypy.json
 
 # Ignore pytorch models and tmp data directories
 yolov*.pt
-/videos
+# /videos
+
+.vscode
