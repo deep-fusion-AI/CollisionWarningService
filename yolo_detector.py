@@ -76,7 +76,7 @@ class YOLODetector:
         scores = scores.ravel().tolist()
 
         # Convert coords to shapely Polygon
-        geometries = list(map(lambda x: box(*x), rects * scale))
+        geometries = map(lambda x: box(*x), rects * scale)
         
         # Generator of object instances
         all_dets = (
