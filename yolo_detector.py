@@ -39,8 +39,12 @@ class YOLODetector:
         self.model.agnostic = False
         self.model.iou = 0.7
         classes = classes or YOLODetector.default_classes
-        class_names = self.model.names
-        self.model.classes = list(map(class_names.index, filter(lambda name: name in class_names, classes)))
+        if classes is not None:
+            # Init detected classes 
+            # Inverted name index: name -> class_id
+            name_idx = dict( ((name,class_id) for class_id, name in self.model.names.items()) )
+            # List class_id specified by names in classes passed as parameter, ignoring unknown classes
+            self.model.classes = [name_idx[nm] for nm in classes if nm in name_idx] or None   # ... or None - in case og empty list leave None value not empty list
         self.model.conf = min_score
         self.max_size = max_size
         self.filter_in_frame = filter_in_frame
