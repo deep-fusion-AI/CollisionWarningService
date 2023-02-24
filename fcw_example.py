@@ -122,7 +122,7 @@ if __name__ == "__main__":
             break
 
         # Detect object in image
-        dets = detector.process_image(cv2.GaussianBlur(img, (5, 5), 1))
+        dets = detector.detect(cv2.GaussianBlur(img, (5, 5), 1))
         # Get bounding boxes as numpy array
         dets = detections_to_numpy(dets)
         # Update state of image trackers

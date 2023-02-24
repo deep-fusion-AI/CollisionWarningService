@@ -7,14 +7,12 @@ import numpy as np
 import flask_socketio
 from flask import Flask, Response, request, session
 from flask_session import Session
-import json
 
-from era_5g_object_detection_common.image_detector import ImageDetectorInitializationFailed
-from era_5g_netapp_interface.task_handler_gstreamer_internal_q import \
+from era_5g_interface.task_handler_gstreamer_internal_q import \
     TaskHandlerGstreamerInternalQ, TaskHandlerGstreamer
-from era_5g_netapp_interface.task_handler_internal_q import TaskHandlerInternalQ
+from era_5g_interface.task_handler_internal_q import TaskHandlerInternalQ
 
-from yolo_detector import YOLODetector
+from yolo_detector_worker import YOLODetectorWorker
 
 # port of the netapp's server
 NETAPP_PORT = os.getenv("NETAPP_PORT", 5896)
@@ -45,14 +43,13 @@ class ArgFormatError(Exception):
 
 @app.route('/register', methods=['POST'])
 def register():
-    """
-    Needs to be called before an attempt to open WS is made.
+    """Needs to be called before an attempt to open WS is made.
 
     Returns:
         _type_: The port used for gstreamer communication.
     """
-    #print(f"register {session.sid} {session}")
-    #print(f"{request}")
+    # print(f"register {session.sid} {session}")
+    # print(f"{request}")
     args = request.get_json(silent=True)
     gstreamer = False
     config = {}
@@ -79,14 +76,12 @@ def register():
         task = TaskHandlerInternalQ(session.sid, image_queue, daemon=True)
     # Create worker
     detector_config = config.get("detector", {})
-    detector_worker = YOLODetector(image_queue, app,
-                                   model=detector_config.get("model", "yolov5n6"),
-                                   classes=detector_config.get("classes"),
-                                   max_size=detector_config.get("max_size", 1024),
-                                   min_score=detector_config.get("min_score", 0.3),
-                                   filter_in_frame=detector_config.get("filter_in_frame", False),
-                                   min_area=detector_config.get("min_area"),
-                                   name="Detector", daemon=True)
+    detector_worker = YOLODetectorWorker(
+        image_queue, app,
+        detector_config,
+        name="Detector",
+        daemon=True
+        )
 
     tasks[session.sid] = {"task_handler": task, "worker": detector_worker, "config": config}
 
@@ -99,15 +94,14 @@ def register():
 
 @app.route('/unregister', methods=['POST'])
 def unregister():
-    """_
-    Disconnects the websocket and removes the task from the memory.
+    """Disconnects the websocket and removes the task from the memory.
 
     Returns:
         _type_: 204 status
     """
     session_id = session.sid
-    #print(f"unregister {session.sid} {session}")
-    #print(f"{request}")
+    # print(f"unregister {session.sid} {session}")
+    # print(f"{request}")
     if session.pop('registered', None):
         task_and_worker = tasks.pop(session.sid)
         task = task_and_worker["task_handler"]
@@ -123,9 +117,7 @@ def unregister():
 
 @app.route('/image', methods=['POST'])
 def post_image():
-    """
-    Allows to receive jpg-encoded image using the HTTP transport
-    """
+    """Allows to receive jpg-encoded image using the HTTP transport"""
 
     sid = session.sid
     task = tasks[sid]["task_handler"]
@@ -150,19 +142,18 @@ def post_image():
 
 @socketio.on('connect', namespace='/results')
 def connect(auth):
-    """
-    Creates a websocket connection to the client for passing the results.
+    """Creates a websocket connection to the client for passing the results.
 
     Raises:
         ConnectionRefusedError: Raised when attempt for connection were made
             without registering first.
     """
 
-    #print(f"connect {session.sid} {session}")
-    #print(f"{request.sid} {request}")
+    # print(f"connect {session.sid} {session}")
+    # print(f"{request.sid} {request}")
     if 'registered' not in session:
         # TODO: disconnect?
-        #flask_socketio.disconnect(request.sid, namespace="/results")
+        # flask_socketio.disconnect(request.sid, namespace="/results")
         raise ConnectionRefusedError('Need to call /register first.')
 
     sid = request.sid
@@ -175,8 +166,8 @@ def connect(auth):
 
 @socketio.on('disconnect', namespace='/results')
 def disconnect():
-    #print(f"disconnect {session.sid} {session}")
-    #print(f"{request.sid} {request}")
+    # print(f"disconnect {session.sid} {session}")
+    # print(f"{request.sid} {request}")
     print(f"Client disconnected: session id: {session.sid}, websocket id: {request.sid}")
 
 
@@ -191,10 +182,12 @@ def get_ports_range(ports_range):
 
 def main(args=None):
     parser = argparse.ArgumentParser(description='Standalone variant of object detection NetApp')
-    parser.add_argument('--ports',
-                        default="5001:5003",
-                        help="Specify the range of ports available for gstreamer connections. Format "
-                             "port_start:port_end. Default is 5001:5003.")
+    parser.add_argument(
+        '--ports',
+        default="5001:5003",
+        help="Specify the range of ports available for gstreamer connections. Format "
+             "port_start:port_end. Default is 5001:5003."
+        )
     args = parser.parse_args()
     global free_ports
     try:
