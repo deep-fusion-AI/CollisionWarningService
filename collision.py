@@ -80,7 +80,28 @@ class PointWorldObject:
         return LineString(xy.T)
 
 
-def get_reference_points(trackers:dict, camera:Camera):
+
+def ray_plane_intersection(x, K, RT, plane_normal):
+    """
+    Get a 3D world position of observed point
+
+    x
+    """
+
+    # RT_inv = inv(RT)
+    K_inv = inv(K)
+    X = RT_inv @ K_inv @ x  # USe just R - dont need to use O and then X = S
+    O = RT_inv @ np.atleast_2d([0,0,0,1]).T  # This is T vector
+    # print(O)
+    S = X - O
+    n = np.atleast_2d([0,0,1])
+    t = (plane_normal @ O[:3]) / (plane_normal @ S[:3])
+    # print(t)
+    return O - t * S
+
+
+
+def get_reference_points(trackers:dict, camera:Camera, *, is_rectified:bool):
     """
     Convert 2D observation to 3D
     """
@@ -91,11 +112,29 @@ def get_reference_points(trackers:dict, camera:Camera):
         [[0.5, 0, 0.5, 0],
         [  0, 0,   0, 1]],
     )
-
+    # image space bounding boxes of objects
     bb = np.vstack([tracker.get_state() for tracker in trackers.values()]).T
-    img_rp = R @ bb  # (N,2)
-    world_rp = object_world_space_coords(img_rp, camera.K, camera.D, camera.RT)
-    return dict(zip(trackers.keys(), world_rp))  # tid -> (x,y,z)
+    img_rp = R @ bb  # (2,N) 2D ref points in distorted image
+
+    if not is_rectified:
+        # If trackers are used on non-rectified image
+        img_rp = camera.rectify_points(img_rp.T).T
+    
+    # points are in cam.K_new camera - normalize and convert to (3,N)
+    n = img_rp.shape[1]
+    img_rp_h = np.vstack([img_rp, np.ones((1,n))])
+    norm_rp = inv(camera.K_new) @ img_rp_h  # (3,N) normalized xyz in camera space
+
+    norm_rp = np.vstack([norm_rp, np.ones((1,n))])  # (4,N) homogeneous in 3D
+
+    X = camera.RT_inv @ norm_rp  # (3,N)
+    O = camera.RT_inv[:,-1].reshape(3,-1)
+    S = X - O
+    plane_normal = np.atleast_2d([0,0,1])
+    t = (plane_normal @ O[:3]) / (plane_normal @ S[:3])
+    world_rp = O - t * S
+
+    return dict(zip(trackers.keys(), world_rp.T))  # tid -> (x,y,z)
 
 
 class ForwardCollisionGuard:
@@ -156,43 +195,3 @@ class ForwardCollisionGuard:
             if obj.distance < self.safety_radius and
                obj.future_path(self.prediction_length, self.prediction_step).intersects(self.danger_zone)
         }
-
-
-###########        
-        # return w
-        
-
-        # # Update trackers with new reference point
-        # for _rp, _track, in zip(rp_world, tracks):
-
-        #     track_id = int(_track[-1])
-        #     if track_id not in world_trackers.keys():
-        #         world_trackers[track_id] = object_tracker(_rp, dt = dt)
-
-        #     kf = world_trackers[track_id]
-
-        #     kf.update(_rp.copy())
-
-        # # Predict future path of close objects
-        # fp = dict()
-        # for kf in world_trackers.values():
-        #     X = predict_future_path(kf, length=1, dt=0.1)
-        #     n = X.shape[1]
-        #     X1 = np.vstack([
-        #         X[[0,3],:],
-        #         np.zeros((1,n)),  # z=0
-        #         np.ones((1,n)),
-        #     ])
-
-        #     x = K @ RT @ X1
-        #     d = x[2]
-        #     x = x[:2,d>0] / x[2,d>0]
-        #     for _x,_y in x.T:
-        #         cv2.circle(img_und, (int(_x), int(_y)), 5, color=(0,128,255), thickness=-1)
-
-        #     path = LineString(X1[:2].T)
-
-        #     if path.intersects(safety_poly):
-        #         cv2.circle(img_und, (50, 50), 20, color=(0,0,255), thickness=-1)
-
-

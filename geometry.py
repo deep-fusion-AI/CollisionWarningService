@@ -6,7 +6,8 @@ import cv2
 from cv2.fisheye import (
     estimateNewCameraMatrixForUndistortRectify as estimateCameraMatrix,
     initUndistortRectifyMap,
-    undistortPoints
+    undistortPoints,
+    distortPoints,
 )
 from shapely.geometry import LineString, Point
 
@@ -15,6 +16,7 @@ def wpca(X, w):
     """ Weighted PCA """
     U,E,_ = np.linalg.svd(X.T @ np.diag(w) @ X)
     return U, E
+
 
 def fit_line(x):
     n = x.shape[0]
@@ -44,6 +46,7 @@ class Camera:
         self.K = K
         self.D = D
         self.RT = RT or np.eye(3,4)
+
         # Rectification parameters
         self.K_new = estimateCameraMatrix(self.K, self.D, self.image_size, np.eye(3), new_size=self.rectified_size, fov_scale=1.2)
         self.maps = initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K_new, self.rectified_size, cv2.CV_32F)
@@ -69,11 +72,24 @@ class Camera:
     
     def rectify_image(self, image):
         map1, map2 = self.maps
-        return cv2.remap(image, map1, map2, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+        img = cv2.GaussianBlur(image, (7,7), 2)
+        return cv2.remap(img, map1, map2, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
     def rectify_points(self, x):
         y = undistortPoints(x.reshape(1,-1,2), self.K, self.D, P=self.K_new)
         return y[0]
+    
+    # def unrectify_points(self, x):
+    #     """
+    #     x : (n,2) in K_new
+    #     """
+    #     n = x.shape[0]
+    #     x = np.vstack([x.T, np.ones((1,n))]).astype(np.float32)
+
+    #     x_norm = inv(self.K_new) @ x 
+    #     y = distortPoints(x_norm.reshape(1,-1,2), self.K, self.D)
+    #     return y[0]
+
 
     @staticmethod
     def from_dict(d:dict) -> "Camera":
@@ -99,9 +115,9 @@ class Camera:
         # Line segment in undistorted image defining the horizon
         x1,y1,x2,y2 = line_segment(fit_line(h_points), 0, rw)
         # Represent horizon as LineString - convenient for geometric processing
-        h = LineString([(x1,y1), (x2,y2)])
+        cam.horizon = LineString([(x1,y1), (x2,y2)])
         # Get location of first point on the horizon - closest point on the line
-        x1,y1 = h.interpolate(h.project(Point(h_points[0]))).coords[0]
+        x1,y1 = cam.horizon.interpolate(cam.horizon.project(Point(h_points[0]))).coords[0]
         # Estimate the rotation matrix
         R = np.eye(4)
         R[:3,:3] = estimate_R(cam.K_new, (x1,y1,x2,y2), d.get("view_direction", "x"))
@@ -149,40 +165,3 @@ def translation_matrix(t):
     T = np.eye(4)
     T[:3,-1] = t
     return T
-
-
-def project_screen_points_to_plane(x, K, RT, plane_normal):
-    """
-    Get a 3D world position of observed point
-
-    x
-    """
-
-    # RT_inv = inv(RT)
-    K_inv = inv(K)
-    X = RT_inv @ K_inv @ x  # USe just R - dont need to use O and then X = S
-    O = RT_inv @ np.atleast_2d([0,0,0,1]).T  # This is T vector
-    # print(O)
-    S = X - O
-    n = np.atleast_2d([0,0,1])
-    t = (plane_normal @ O[:3]) / (plane_normal @ S[:3])
-    # print(t)
-    return O - t * S
-
-
-def object_world_space_coords(x, K, D, RT):
-    """
-    x: (N,2)
-
-    Returns:
-    X: (N,3)
-    """
-    n = x.shape[0]
-    if n == 0:
-        return np.empty((4,0))
-    x = np.atleast_2d(cv2.fisheye.undistortPoints(x.reshape(1,-1,2), K[:3,:3], D, None, K[:3,:3]).squeeze())
-    x = np.hstack([x, np.ones((x.shape[0],2))]).T
-    # World points
-    return project_screen_points_to_plane(
-        x, K, RT, np.atleast_2d([0,0,1])
-    )[:3].T
