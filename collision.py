@@ -80,27 +80,6 @@ class PointWorldObject:
         return LineString(xy.T)
 
 
-
-def ray_plane_intersection(x, K, RT, plane_normal):
-    """
-    Get a 3D world position of observed point
-
-    x
-    """
-
-    # RT_inv = inv(RT)
-    K_inv = inv(K)
-    X = RT_inv @ K_inv @ x  # USe just R - dont need to use O and then X = S
-    O = RT_inv @ np.atleast_2d([0,0,0,1]).T  # This is T vector
-    # print(O)
-    S = X - O
-    n = np.atleast_2d([0,0,1])
-    t = (plane_normal @ O[:3]) / (plane_normal @ S[:3])
-    # print(t)
-    return O - t * S
-
-
-
 def get_reference_points(trackers:dict, camera:Camera, *, is_rectified:bool):
     """
     Convert 2D observation to 3D
