@@ -12,7 +12,7 @@ from era_5g_interface.task_handler_gstreamer_internal_q import \
     TaskHandlerGstreamerInternalQ, TaskHandlerGstreamer
 from era_5g_interface.task_handler_internal_q import TaskHandlerInternalQ
 
-from yolo_detector_worker import YOLODetectorWorker
+from collision_worker import CollisionWorker
 
 # port of the netapp's server
 NETAPP_PORT = os.getenv("NETAPP_PORT", 5896)
@@ -53,10 +53,16 @@ def register():
     args = request.get_json(silent=True)
     gstreamer = False
     config = {}
+    camera_config = {}
+    fps = 0
     if args:
         gstreamer = args.get("gstreamer", False)
         config = args.get("config", {})
+        camera_config = args.get("camera_config", {})
+        fps = args.get("fps", 0)
         print(f"Config: {config}")
+        print(f"Camera config: {camera_config}")
+        print(f"FPS: {fps}")
 
     if gstreamer and not free_ports:
         return {"error": "Not enough resources"}, 503
@@ -75,15 +81,15 @@ def register():
     else:
         task = TaskHandlerInternalQ(session.sid, image_queue, daemon=True)
     # Create worker
-    detector_config = config.get("detector", {})
-    detector_worker = YOLODetectorWorker(
+    worker = CollisionWorker(
         image_queue, app,
-        detector_config,
+        config, camera_config, fps,
         name="Detector",
         daemon=True
         )
 
-    tasks[session.sid] = {"task_handler": task, "worker": detector_worker, "config": config}
+    tasks[session.sid] = {"task_handler": task,
+                          "worker": worker}
 
     print(f"Client registered: {session.sid}")
     if gstreamer:
@@ -130,7 +136,7 @@ def post_image():
     index = 0
     for file in request.files.to_dict(flat=False)['files']:
         # print(file)
-        nparr = np.fromstring(file.read(), np.uint8)
+        nparr = np.frombuffer(file.read(), np.uint8)
         # decode image
         img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
 
