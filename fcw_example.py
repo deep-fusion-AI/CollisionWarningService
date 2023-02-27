@@ -42,7 +42,7 @@ def segmentize(p:LineString, max_dist=10):
 
 def draw_horizon(d: ImageDraw.ImageDraw, cam:Camera, **kwargs):
     # h = segmentize(cam.horizon, max_dist=20)
-    x = np.array(cam.horizon.coords)
+    x = list(cam.horizon.coords)
     # n = x.shape[1]
     # x = np.vstack([x, np.ones((1,n))]).astype(np.float32)
     # x = (np.linalg.inv(cam.K_new) @ x)[:2].T
