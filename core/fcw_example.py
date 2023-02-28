@@ -25,7 +25,7 @@ video_file = Path("../videos/video3.mp4").as_posix()
 # video_file = "rtp://localhost:1234/"
 
 
-font = ImageFont.truetype("data/UbuntuMono-B.ttf", 24, encoding="unic")
+font = ImageFont.truetype("../data/UbuntuMono-B.ttf", 24, encoding="unic")
 
 from more_itertools import windowed
 from math import ceil
