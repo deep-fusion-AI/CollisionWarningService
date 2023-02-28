@@ -65,9 +65,6 @@ class ResultsViewer(Thread):
                     print(f"{(time_now - timestamp) / 100.}s delay")
                 try:
                     frame = image_storage.pop(timestamp_str)
-                    # TODO: Where rectify image?
-                    frame = camera.rectify_image(frame)
-
                     detections = results["detections"]
                     for d in detections:
                         score = float(d["score"])
@@ -144,6 +141,7 @@ def main() -> None:
         config_dict = yaml.safe_load(config.open())
         logging.info("Loading camera configuration {cfg}".format(cfg=camera_config))
         camera_config_dict = yaml.safe_load(camera_config.open())
+        logging.info("Initializing camera calibration")
         camera = Camera.from_dict(camera_config_dict)
 
         if FROM_SOURCE:
@@ -170,12 +168,10 @@ def main() -> None:
             timestamp = math.floor(time.time() * 100)
             if not ret:
                 break
-            #resized = cv2.resize(frame, (640, 480), interpolation=cv2.INTER_AREA)
+            frame_undistorted = camera.rectify_image(frame)
             timestamp_str = str(timestamp)
-            #image_storage[timestamp_str] = resized
-            #client.send_image(resized, timestamp_str, 5)
-            image_storage[timestamp_str] = frame
-            client.send_image(frame, timestamp_str, 5)
+            image_storage[timestamp_str] = frame_undistorted
+            client.send_image(frame_undistorted, timestamp_str, 1)
 
     except FailedToConnect as ex:
         print(f"Failed to connect to server ({ex})")

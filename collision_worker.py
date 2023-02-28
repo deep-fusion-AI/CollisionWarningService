@@ -34,10 +34,8 @@ class CollisionWorker(Worker, ImageDetector):
         self.camera = Camera.from_dict(camera_config)
 
     def process_image(self, image):
-        # TODO: Where rectify image?
-        image_undistorted = self.camera.rectify_image(image)
         # Detect object in image
-        detections = self.detector.detect(image_undistorted)
+        detections = self.detector.detect(image)
         # Get bounding boxes as numpy array
         detections = detections_to_numpy(detections)
         # Update state of image trackers
