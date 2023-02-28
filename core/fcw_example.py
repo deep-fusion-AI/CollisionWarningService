@@ -1,17 +1,12 @@
-import logging
-import os
 from pathlib import Path
 
-import cv2
-import numpy as np
 import yaml
+from PIL import Image, ImageDraw, ImageFont
 
 from collision import *
 from detection import *
 from sort import Sort
 from yolo_detector import YOLODetector
-
-from PIL import Image, ImageDraw, ImageFont
 
 # os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 
@@ -24,23 +19,23 @@ video_file = Path("../videos/video3.mp4").as_posix()
 
 # video_file = "rtp://localhost:1234/"
 
-
 font = ImageFont.truetype("../data/UbuntuMono-B.ttf", 24, encoding="unic")
 
 from more_itertools import windowed
 from math import ceil
 
-def segmentize(p:LineString, max_dist=10):
+
+def segmentize(p: LineString, max_dist=10):
     pts = []
     for a, b in windowed(p.coords, n=2):
-        seg = LineString([a,b])
-        f = np.linspace(0, seg.length, ceil(seg.length/max_dist), endpoint=False)
+        seg = LineString([a, b])
+        f = np.linspace(0, seg.length, ceil(seg.length / max_dist), endpoint=False)
         _pts = [seg.interpolate(x) for x in f]
         pts.extend(_pts)
     return LineString(pts)
 
 
-def draw_horizon(d: ImageDraw.ImageDraw, cam:Camera, **kwargs):
+def draw_horizon(d: ImageDraw.ImageDraw, cam: Camera, **kwargs):
     # h = segmentize(cam.horizon, max_dist=20)
     x = list(cam.horizon.coords)
     # n = x.shape[1]
@@ -64,7 +59,7 @@ def draw_tracked_objects(d: ImageDraw.ImageDraw, tracked_objects):
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO)
-    log = logging.info("Starting Forward Collision Guard")
+    logging.info("Starting Forward Collision Guard")
 
     logging.info("Loading configuration file {cfg}".format(cfg=config))
     config_dict = yaml.safe_load(config.open())
@@ -79,7 +74,6 @@ if __name__ == "__main__":
     # Init collision guard
     logging.info("Initializing Forward warning")
     guard = ForwardCollisionGuard.from_dict(config_dict.get("fcw", {}))
-
 
     # Load camera calibration
     logging.info("Loading camera configuration {cfg}".format(cfg=camera_config))
@@ -97,9 +91,7 @@ if __name__ == "__main__":
 
     guard.dt = 1 / fps  # Finish setup if the guard
 
-    
     # output = cv2.VideoWriter("out.mp4", cv2.VideoWriter_fourcc(*"MP4V"), fps, camera.rectified_size)
-
 
     # FCW Loop
     while True:
@@ -107,13 +99,13 @@ if __name__ == "__main__":
         if not ret or img is None:
             logging.info("Video ended")
             break
-        img_undistort = camera.rectify_image(img)
+        img_undistorted = camera.rectify_image(img)
         # Detect object in image
-        dets = detector.detect(img_undistort)
+        detections = detector.detect(img_undistorted)
         # Get bounding boxes as numpy array
-        dets = detections_to_numpy(dets)
+        detections = detections_to_numpy(detections)
         # Update state of image trackers
-        tracker.update(dets)
+        tracker.update(detections)
         # Represent trackers as dict  tid -> KalmanBoxTracker
         tracked_objects = {
             t.id: t for t in tracker.trackers
@@ -128,12 +120,12 @@ if __name__ == "__main__":
         dangerous_objects = guard.dangerous_objects()
 
         # Visualization
-        base = Image.fromarray(img_undistort[..., ::-1], "RGB").convert("RGBA")
+        base = Image.fromarray(img_undistorted[..., ::-1], "RGB").convert("RGBA")
         objects_image = Image.new("RGBA", base.size)
         osd_image = Image.new("RGBA", base.size)
 
         osd_draw = ImageDraw.Draw(osd_image)
-        draw_horizon(osd_draw, camera, fill=(255,255,0,128), width=1)
+        draw_horizon(osd_draw, camera, fill=(255, 255, 0, 128), width=1)
 
         objects_draw = ImageDraw.Draw(objects_image)
         draw_tracked_objects(objects_draw, tracked_objects)
@@ -141,11 +133,13 @@ if __name__ == "__main__":
         for tid, o in dangerous_objects.items():
             x1, y1, x2, y2 = tracked_objects[tid].get_state()[0]
             # objects_draw.rectangle([x1, y1, x2, y2], outline=(255, 0, 0), width=2)
-            objects_draw.rectangle([x1, y1, x2, y2], fill=(255, 0, 0, 64))
+            objects_draw.rectangle((x1, y1, x2, y2), fill=(255, 0, 0, 64))
             dist = Point(o.location).distance(guard.vehicle_zone)
             info = f"{dist:.1f} m"
-            objects_draw.text((0.5 * (x1 + x2), 0.5 * (y1 + y2)), info, align="center", font=font,
-                              stroke_fill=(255, 255, 255), stroke_width=1, fill=(0, 0, 0))
+            objects_draw.text(
+                (0.5 * (x1 + x2), 0.5 * (y1 + y2)), info, align="center", font=font,
+                stroke_fill=(255, 255, 255), stroke_width=1, fill=(0, 0, 0)
+                )
 
         display = Image.alpha_composite(objects_image, osd_image)
         out = Image.alpha_composite(base, display).convert("RGB")

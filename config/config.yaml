@@ -32,8 +32,8 @@ fcw:
     - [20, 2]
     - [20,-2]
     - [ 3,-2]
-  vehicle_hength: 4.6
-  vehcicle_width: 1.8
+  vehicle_length: 4.6
+  vehicle_width: 1.8
   vehicle_zone_buffer: 0.5
   prediction_length: 1.0  # [s] path prediction time
   prediction_step: 0.1  # [s] integration step for prediction

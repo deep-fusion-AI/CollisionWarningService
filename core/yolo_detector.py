@@ -8,8 +8,6 @@ Roman Juranek <r.juranek@cognitechna.cz>
 
 List of available classes can be found here:
 https://github.com/ultralytics/yolov5/blob/master/data/coco128.yaml
-
-
 """
 
 from typing import Iterable
@@ -35,7 +33,7 @@ class YOLODetector:
         min_score: float = 0.3,
         filter_in_frame: bool = True,
         min_area: float = None
-        ):
+    ):
         self.model = torch.hub.load("ultralytics/yolov5", model, pretrained=True)
         self.model.agnostic = False
         self.model.iou = 0.7
@@ -85,7 +83,7 @@ class YOLODetector:
         geometries = map(lambda x: box(*x), rects * scale)
 
         # Generator of object instances
-        all_dets = (
+        all_detections = (
             ObjectObservation(
                 geometry=geometry,
                 score=score,
@@ -97,11 +95,11 @@ class YOLODetector:
         # Filter objects that are in the frame
         if self.filter_in_frame:
             is_in_frame = lambda d: d.is_in_frame((h, w), margin=10)
-            all_dets = filter(is_in_frame, all_dets)
+            all_detections = filter(is_in_frame, all_detections)
 
-        # Filter objects with suficient size
+        # Filter objects with sufficient size
         if self.min_area is not None and self.min_area > 0:
             sufficient_size = lambda d: d.geometry.area > self.min_area
-            all_dets = filter(sufficient_size, all_dets)
+            all_detections = filter(sufficient_size, all_detections)
 
-        return list(all_dets)
+        return list(all_detections)
