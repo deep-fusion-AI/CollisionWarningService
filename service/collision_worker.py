@@ -1,12 +1,10 @@
 import flask_socketio
 from queue import Queue
-import logging
 
-from yolo_detector import YOLODetector
-from sort import Sort
-from geometry import Camera
-from detection import *
-from collision import *
+from core.yolo_detector import YOLODetector
+from core.sort import Sort
+from core.detection import *
+from core.collision import *
 
 from era_5g_object_detection_common.image_detector import ImageDetector
 from era_5g_object_detection_standalone.worker import Worker

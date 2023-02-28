@@ -16,11 +16,11 @@ from PIL import Image, ImageDraw, ImageFont
 # os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 
 # Configuration of the algorithm
-config = Path("config/config.yaml")
+config = Path("../config/config.yaml")
 
 # Camera settings - specific for the particular input
-camera_config = Path("videos/video3.yaml")
-video_file = Path("videos/video3.mp4").as_posix()
+camera_config = Path("../videos/video3.yaml")
+video_file = Path("../videos/video3.mp4").as_posix()
 
 # video_file = "rtp://localhost:1234/"
 

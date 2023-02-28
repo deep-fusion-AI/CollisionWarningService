@@ -16,7 +16,7 @@ import cv2
 import numpy as np
 import yaml
 
-from geometry import Camera
+from core.geometry import Camera
 
 from era_5g_client.client import NetAppClient
 from era_5g_client.exceptions import FailedToConnect
@@ -35,12 +35,12 @@ NETAPP_ADDRESS = os.getenv("NETAPP_ADDRESS", "127.0.0.1")
 # port of the netapp's server
 NETAPP_PORT = os.getenv("NETAPP_PORT", 5896)
 # test video file
-TEST_VIDEO_FILE = os.getenv("TEST_VIDEO_FILE", "videos/video3.mp4")
+TEST_VIDEO_FILE = os.getenv("TEST_VIDEO_FILE", "../videos/video3.mp4")
 
 # Configuration of the algorithm
-config = Path("config/config.yaml")
+config = Path("../config/config.yaml")
 # Camera settings - specific for the particular input
-camera_config = Path("videos/video3.yaml")
+camera_config = Path("../videos/video3.yaml")
 
 camera = None
 
