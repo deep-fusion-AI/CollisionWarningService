@@ -27,7 +27,7 @@ class CollisionWorker(Worker, ImageDetector):
         self.tracker = Sort.from_dict(config.get("tracker", {}))
         logging.info("Initializing forward collision guard")
         self.guard = ForwardCollisionGuard.from_dict(config.get("fcw", {}))
-        self.guard.dt = fps
+        self.guard.dt = 1 / fps
         logging.info("Initializing camera calibration")
         self.camera = Camera.from_dict(camera_config)
 
