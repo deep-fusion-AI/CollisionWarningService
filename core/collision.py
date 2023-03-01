@@ -1,9 +1,10 @@
 import logging
 from typing import Dict
 
+import numpy as np
 from filterpy.common import Q_discrete_white_noise
 from filterpy.kalman import KalmanFilter
-from shapely.geometry import Polygon, box
+from shapely.geometry import LineString, Point, Polygon, box
 
 from geometry import *
 
@@ -29,16 +30,23 @@ def object_tracker(x_init, dt: float = 1):
          [0, 0, 0, 1, 0, 0]]
     )  # Measurement function
 
-    kf.P = np.diag([1, 2, 4, 1, 2, 4]) * 0.5
+    kf.P = np.diag([1, 2, 4, 1, 2, 4]) * 100
     z_std = 2
     kf.R = np.diag([z_std ** 2, z_std ** 2])  # 1 standard
-    kf.Q = Q_discrete_white_noise(dim=3, dt=dt, var=0.1e-0 ** 2, block_size=2)  # process uncertainty
+    kf.Q = Q_discrete_white_noise(dim=3, dt=dt, var=0.5e-1**2, block_size=2) # process uncertainty
     kf._alpha_sq = 1
     x, y = x_init
     kf.x[0] = x
     kf.x[3] = y
     return kf
 
+def covariance(xy: np.ndarray, sigma: float = 0.1, scale: float = 0.1):
+    d = np.linalg.norm(xy)
+    x,y = xy
+    th = np.arctan2(y, x)
+    c, s = np.cos(th), np.sin(th)
+    M = np.array([[c, -s], [s, c]])
+    return M @ (np.diag([1, scale]) * sigma * d)
 
 class PointWorldObject:
     """
@@ -54,7 +62,7 @@ class PointWorldObject:
 
     def update(self, location=None):
         self.kf.predict()
-        self.kf.update(location)
+        self.kf.update(location, R=covariance(location, sigma=0.05, scale=0.2))
         self.xy = np.dot(self.kf.H, self.kf.x).T[0]
         self.vxvy = np.dot(np.array([[0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0]]), self.kf.x).T[0]
 
