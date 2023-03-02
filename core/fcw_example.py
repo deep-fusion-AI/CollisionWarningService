@@ -1,11 +1,21 @@
+"""
+Early Collision Warning system
+
+
+"""
+
+import logging
 from pathlib import Path
 
+import cv2
+import numpy as np
 import yaml
-from PIL import Image, ImageDraw, ImageFont
-
-from collision import *
-from detection import *
+from collision import ForwardCollisionGuard, get_reference_points
+from detection import detections_to_numpy
+from geometry import Camera
+from PIL import Image
 from sort import Sort
+from vizualization import *
 from yolo_detector import YOLODetector
 
 # os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
@@ -17,44 +27,8 @@ config = Path("../config/config.yaml")
 camera_config = Path("../videos/video3.yaml")
 video_file = Path("../videos/video3.mp4").as_posix()
 
-# video_file = "rtp://localhost:1234/"
-
-font = ImageFont.truetype("../data/UbuntuMono-B.ttf", 24, encoding="unic")
-
-from more_itertools import windowed
-from math import ceil
-
-
-def segmentize(p: LineString, max_dist=10):
-    pts = []
-    for a, b in windowed(p.coords, n=2):
-        seg = LineString([a, b])
-        f = np.linspace(0, seg.length, ceil(seg.length / max_dist), endpoint=False)
-        _pts = [seg.interpolate(x) for x in f]
-        pts.extend(_pts)
-    return LineString(pts)
-
-
-def draw_horizon(d: ImageDraw.ImageDraw, cam: Camera, **kwargs):
-    # h = segmentize(cam.horizon, max_dist=20)
-    x = list(cam.horizon.coords)
-    # n = x.shape[1]
-    # x = np.vstack([x, np.ones((1,n))]).astype(np.float32)
-    # x = (np.linalg.inv(cam.K_new) @ x)[:2].T
-    # X = cv2.fisheye.distortPoints(x.reshape(1,-1,2), cam.K, cam.D)[0]
-    d.line(x, **kwargs)
-
-
-def draw_tracked_objects(d: ImageDraw.ImageDraw, tracked_objects):
-    for tid, t in tracked_objects.items():
-        x1, y1, x2, y2 = t.get_state()[0]
-        color = (0, 255, 0, 64)
-        d.rectangle((x1, y1, x2, y2), fill=color, outline=None, width=0.5)
-        # label = f"track {tid}"
-        # _, _, tw, th = font.getbbox(label, stroke_width=1)
-        # tw, th = tw + 4, th + 4
-        # d.rectangle((x1, y1 - th, x1 + tw, y1), fill=(0, 0, 0))
-        # d.text((x1 + 3, y1 - th + 2), label, fill=(255, 255, 255), font=font, stroke_width=0)
+# camera_config = Path("../__videos/video1.yaml")
+# video_file = Path("../__videos/video1.mp4").as_posix()
 
 
 if __name__ == "__main__":
@@ -91,7 +65,11 @@ if __name__ == "__main__":
 
     guard.dt = 1 / fps  # Finish setup if the guard
 
-    # output = cv2.VideoWriter("out.mp4", cv2.VideoWriter_fourcc(*"MP4V"), fps, camera.rectified_size)
+    output = cv2.VideoWriter("out.mp4", cv2.VideoWriter_fourcc(*"MP4V"), fps, camera.image_size)
+
+    cv2.namedWindow("FCW")
+
+    logo = cog_logo((80, 80))
 
     # FCW Loop
     while True:
@@ -109,45 +87,43 @@ if __name__ == "__main__":
         # Represent trackers as dict  tid -> KalmanBoxTracker
         tracked_objects = {
             t.id: t for t in tracker.trackers
-            if t.hit_streak > tracker.min_hits and t.time_since_update < 1
+            if t.hit_streak > tracker.min_hits and t.time_since_update < 1 and t.age > 3
         }
         # Get 3D locations of objects
         ref_pt = get_reference_points(tracked_objects, camera, is_rectified=True)
-        # print(ref_pt)
         # Update state of objects in world
         guard.update(ref_pt)
         # Get list of current offenses
         dangerous_objects = guard.dangerous_objects()
 
-        # Visualization
-        base = Image.fromarray(img_undistorted[..., ::-1], "RGB").convert("RGBA")
-        objects_image = Image.new("RGBA", base.size)
-        osd_image = Image.new("RGBA", base.size)
-
-        osd_draw = ImageDraw.Draw(osd_image)
-        draw_horizon(osd_draw, camera, fill=(255, 255, 0, 128), width=1)
-
-        objects_draw = ImageDraw.Draw(objects_image)
-        draw_tracked_objects(objects_draw, tracked_objects)
-
-        for tid, o in dangerous_objects.items():
-            x1, y1, x2, y2 = tracked_objects[tid].get_state()[0]
-            # objects_draw.rectangle([x1, y1, x2, y2], outline=(255, 0, 0), width=2)
-            objects_draw.rectangle((x1, y1, x2, y2), fill=(255, 0, 0, 64))
-            dist = Point(o.location).distance(guard.vehicle_zone)
-            info = f"{dist:.1f} m"
-            objects_draw.text(
-                (0.5 * (x1 + x2), 0.5 * (y1 + y2)), info, align="center", font=font,
-                stroke_fill=(255, 255, 255), stroke_width=1, fill=(0, 0, 0)
-                )
-
-        display = Image.alpha_composite(objects_image, osd_image)
-        out = Image.alpha_composite(base, display).convert("RGB")
-
-        cv_image = np.array(out)[..., ::-1]
+        # Vizualization
+        # if args.show:
+        base_undistorted = Image.fromarray(img_undistorted[..., ::-1], "RGB").convert("RGBA")
+        # Base layer is the camera image
+        base = Image.fromarray(img[..., ::-1], "RGB").convert("RGBA")
+        # Layers showing various information
+        layers = [
+            (draw_horizon(base_undistorted.size, camera, width=2, fill=(255,255,0,64)), None),
+            (draw_image_trackers(base_undistorted.size, tracker.trackers), None),
+            (draw_world_objects(base_undistorted.size, camera, guard.objects.values()), None)
+        ]
+        # Compose layers together
+        compose_layers(base_undistorted, *layers)
+        w = base.size[0]
+        w1 = base_undistorted.size[0]
+        compose_layers(
+            base,   # Original image
+            (base_undistorted, (w-w1-8, 8)),
+            (logo, (8,8))
+        )
+        # Convert to OpenCV for display
+        cv_image = np.array(base.convert("RGB"))[...,::-1]
+        # Display the image
         cv2.imshow("FCW", cv_image)
         cv2.waitKey(1)
 
-    #     output.write(cv_image)
+        output.write(cv_image)
 
-    # output.release()
+    output.release()
+
+    cv2.destroyAllWindows()
