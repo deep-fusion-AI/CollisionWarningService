@@ -6,14 +6,16 @@ from typing import Iterable, List
 
 import numpy as np
 import sort
-from collision import PointWorldObject
+from collision import PointWorldObject, ForwardCollisionGuard, ObjectStatus
 from geometry import Camera
 from more_itertools import windowed
 from PIL import Image, ImageDraw, ImageFont
-from shapely.geometry import LineString, Point
+from shapely.geometry import LineString, Point, Polygon
+from shapely.ops import split
 
-# # Font for OSD
-# _font = ImageFont.truetype("../data/UbuntuMono-B.ttf", 24, encoding="unic")
+# Font for OSD
+_font = ImageFont.truetype("../data/UbuntuMono-R.ttf", 14, encoding="unic")
+
 
 
 # def segmentize(p: LineString, max_dist=10):
@@ -98,6 +100,67 @@ def draw_world_objects(
     return image
 
 
+def draw_danger_zone(size: tuple, camera: Camera, zone: Polygon):
+    image = Image.new("RGBA", size)
+    draw = ImageDraw.Draw(image)
+
+    front = Polygon([
+        [ 1,-10],
+        [ 1, 10],
+        [50, 10],
+        [50,-101],
+    ])
+
+    X = np.array(zone.intersection(front).boundary.coords)
+    n = X.shape[0]
+    X = np.hstack([X, np.zeros((n,1))])
+    scr_loc, _ = camera.project_points(X,near=-100)
+    scr_loc = list(map(tuple, scr_loc))
+    draw.polygon(scr_loc, fill=(255,255,0,32), outline=(255,255,0,128))
+
+    return image
+
+
+def tracking_info(
+        size: tuple,
+        object_status: List[ObjectStatus]
+    ):
+    image = Image.new("RGBA", size, color=(0,0,0,255))
+    draw = ImageDraw.Draw(image)
+
+    info_text = f"Tracking {len(object_status)}"
+    draw.text((8, 0), info_text, fill=(255, 255, 255), font=_font)
+
+    caution_status = any(
+        s.crosses_danger_zone for s in object_status
+    )
+
+    warning_status = any(
+        s.is_in_danger_zone for s in object_status
+    )
+
+    danger_status = any(
+        s.time_to_collision > 0 for s in object_status if s.time_to_collision is not None
+    )
+
+    caution_color = (255,255,0) if caution_status else (64,64,64)
+    draw.text((160, 0), "CAUTION", fill=caution_color, font=_font, align="left")
+    
+    warning_color = (255,255,0) if warning_status else (64,64,64)
+    draw.text((260, 0), "WARNING", fill=warning_color, font=_font, align="left")
+
+    danger_color = (255,0,0) if danger_status else (64,64,64)
+    draw.text((360, 0), "DANGER", fill=danger_color, font=_font, align="left")
+
+    if danger_status:
+        ttc = min(
+            s.time_to_collision for s in object_status if s.time_to_collision is not None
+        )
+        draw.text((460, 0), f"ttc = {ttc:0.1f} s", fill=(255, 0, 0), font=_font, align="left")
+
+    return image
+
+
 def cog_logo(size: tuple = (256, 256)):
     """
     Cognitechna logo image
@@ -141,13 +204,7 @@ def cog_logo(size: tuple = (256, 256)):
 
 #         objects_draw = ImageDraw.Draw(objects_image)
 
-#         X = np.array(guard.danger_zone.boundary.coords)
-#         n = X.shape[0]
-#         X = np.hstack([X, np.zeros((n,1))])
-#         scr_loc, _ = camera.project_points(X,near=-100)
-#         scr_loc = list(map(tuple, scr_loc))
-#         objects_draw.polygon(scr_loc, fill=(255,255,0,32), outline=(255,255,0,128))
-
+#        
 #         draw_tracked_objects(objects_draw, tracked_objects)
 
 #         for tid, o in dangerous_objects.items():

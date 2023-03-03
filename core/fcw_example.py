@@ -27,8 +27,8 @@ config = Path("../config/config.yaml")
 camera_config = Path("../videos/video3.yaml")
 video_file = Path("../videos/video3.mp4").as_posix()
 
-# camera_config = Path("../__videos/video1.yaml")
-# video_file = Path("../__videos/video1.mp4").as_posix()
+camera_config = Path("../__videos/video5.yaml")
+video_file = Path("../__videos/video5.mp4").as_posix()
 
 
 if __name__ == "__main__":
@@ -98,23 +98,27 @@ if __name__ == "__main__":
 
         # Vizualization
         # if args.show:
-        base_undistorted = Image.fromarray(img_undistorted[..., ::-1], "RGB").convert("RGBA")
+        base_undistorted = Image.fromarray(img_undistorted[..., ::-1], "RGB").convert("L").convert("RGBA")
         # Base layer is the camera image
         base = Image.fromarray(img[..., ::-1], "RGB").convert("RGBA")
         # Layers showing various information
+        sz = base_undistorted.size
         layers = [
-            (draw_horizon(base_undistorted.size, camera, width=2, fill=(255,255,0,64)), None),
-            (draw_image_trackers(base_undistorted.size, tracker.trackers), None),
-            (draw_world_objects(base_undistorted.size, camera, guard.objects.values()), None)
+            (draw_danger_zone(sz, camera, guard.danger_zone), None),
+            (draw_horizon(sz, camera, width=1, fill=(255,255,0,64)), None),
+            (draw_image_trackers(sz, tracker.trackers), None),
+            (draw_world_objects(sz, camera, guard.objects.values()), None),
         ]
         # Compose layers together
         compose_layers(base_undistorted, *layers)
-        w = base.size[0]
-        w1 = base_undistorted.size[0]
+        O = list(guard.label_objects(include_distant=True))
+        w,h  = base.size
+        w1,h1 = base_undistorted.size
         compose_layers(
             base,   # Original image
-            (base_undistorted, (w-w1-8, 8)),
-            (logo, (8,8))
+            (base_undistorted, (8, h-h1-8)),  # Pic with rectified image and vizualized trackers
+            (tracking_info((w,16), O), (0,0)),
+            (logo, (8,16+8))
         )
         # Convert to OpenCV for display
         cv_image = np.array(base.convert("RGB"))[...,::-1]
