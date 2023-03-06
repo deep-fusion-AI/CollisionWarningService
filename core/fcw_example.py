@@ -69,7 +69,13 @@ if __name__ == "__main__":
 
     cv2.namedWindow("FCW")
 
+    # Prepare static stuff for vizualization
     logo = cog_logo((80, 80))
+    coord_sys = draw_world_coordinate_system(camera.rectified_size, camera)
+    coord_sys.putalpha(64)
+    danger_zone = draw_danger_zone(camera.rectified_size, camera, guard.danger_zone)
+    horizon = draw_horizon(camera.rectified_size, camera, width=1, fill=(255,255,0,64))
+    marker = vehicle_marker_image()
 
     # FCW Loop
     while True:
@@ -97,15 +103,16 @@ if __name__ == "__main__":
         dangerous_objects = guard.dangerous_objects()
 
         # Vizualization
-        # if args.show:
+        # TODO if args.show:
         base_undistorted = Image.fromarray(img_undistorted[..., ::-1], "RGB").convert("L").convert("RGBA")
         # Base layer is the camera image
         base = Image.fromarray(img[..., ::-1], "RGB").convert("RGBA")
         # Layers showing various information
         sz = base_undistorted.size
         layers = [
-            (draw_danger_zone(sz, camera, guard.danger_zone), None),
-            (draw_horizon(sz, camera, width=1, fill=(255,255,0,64)), None),
+            (coord_sys, None),
+            (danger_zone, None),
+            (horizon, None),
             (draw_image_trackers(sz, tracker.trackers), None),
             (draw_world_objects(sz, camera, guard.objects.values()), None),
         ]
@@ -116,9 +123,10 @@ if __name__ == "__main__":
         w1,h1 = base_undistorted.size
         compose_layers(
             base,   # Original image
-            (base_undistorted, (8, h-h1-8)),  # Pic with rectified image and vizualized trackers
             (tracking_info((w,16), O), (0,0)),
-            (logo, (8,16+8))
+            (mark_vehicles(camera.image_size, guard.objects.values(), camera, marker, (7,0)), None),
+            (logo, (8,16+8)),
+            (base_undistorted, (8, h-h1-8)),  # Pic with rectified image and vizualized trackers
         )
         # Convert to OpenCV for display
         cv_image = np.array(base.convert("RGB"))[...,::-1]

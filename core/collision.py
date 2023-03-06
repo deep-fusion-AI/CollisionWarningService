@@ -218,6 +218,7 @@ class ForwardCollisionGuard:
             yield ObjectStatus(
                 distance=dist,
                 location=loc,
+                path=path,
                 is_in_danger_zone=self.danger_zone.contains(loc),
                 crosses_danger_zone=path.crosses(self.danger_zone),
                 time_to_collision=ttc,
@@ -230,6 +231,7 @@ class ObjectStatus:
     distance: float
     # Location relative to vehicle reference point
     location: Point
+    path: LineString
     # Flag indicating object in danger zone
     is_in_danger_zone: bool
     # Flag indicating if object path crosses danger zone
