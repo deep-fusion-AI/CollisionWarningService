@@ -93,13 +93,12 @@ class KalmanBoxTracker(object):
     """
     count = 0
 
-    def __init__(self, bbox):
+    def __init__(self, bbox, dt: float):
         """
         Initialises a tracker using initial bounding box.
         """
         # define constant velocity model
         self.kf = KalmanFilter(dim_x=7, dim_z=4)
-        dt = 1 / 30
         self.kf.F = np.array(
             [[1, 0, 0, 0, dt, 0, 0], [0, 1, 0, 0, 0, dt, 0], [0, 0, 1, 0, 0, 0, dt], [0, 0, 0, 1, 0, 0, 0],
              [0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 1]]
@@ -108,9 +107,12 @@ class KalmanBoxTracker(object):
             [[1, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0]]
         )
 
-        self.kf.R[2:, 2:] *= 10.
-        self.kf.P[4:, 4:] *= 1000.  # give high uncertainty to the unobservable initial velocities
-        self.kf.P *= 100.
+        # 4x4 xysr
+        self.kf.R = np.diag([1,1,5,5]) * 0.1
+        # 7x7 x,y,s,r,dx,dy,ds
+        self.kf.P[4:, 4:] *= 100.  # give high uncertainty to the unobservable initial velocities
+        self.kf.P *= 1
+        # 7x7 noise
         self.kf.Q[-1, -1] *= 0.01
         self.kf.Q[4:, 4:] *= 0.01
 
@@ -200,7 +202,7 @@ def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
 
 
 class Sort:
-    def __init__(self, max_age=1, min_hits=3, iou_threshold=0.3):
+    def __init__(self, max_age: int = 1, min_hits: int = 3, iou_threshold: float = 0.3, dt: float = 1):
         """
         Sets key parameters for SORT
         """
@@ -209,6 +211,7 @@ class Sort:
         self.iou_threshold = iou_threshold
         self.trackers = []
         self.frame_count = 0
+        self.dt = dt
 
     @staticmethod
     def from_dict(d: dict):
@@ -250,7 +253,7 @@ class Sort:
 
         # create and initialise new trackers for unmatched detections
         for i in unmatched_detections:
-            trk = KalmanBoxTracker(detections[i, :])
+            trk = KalmanBoxTracker(detections[i, :], dt=self.dt)
             self.trackers.append(trk)
         i = len(self.trackers)
         for trk in reversed(self.trackers):

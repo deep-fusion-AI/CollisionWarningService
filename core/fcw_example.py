@@ -41,23 +41,7 @@ if __name__ == "__main__":
     logging.info("Loading configuration file {cfg}".format(cfg=args.config.name))
     config_dict = yaml.safe_load(args.config)
 
-    # Init object detector
-    detector = YOLODetector.from_dict(config_dict.get("detector", {}))
-
-    # Init image tracker
-    logging.info("Initializing image tracker")
-    tracker = Sort.from_dict(config_dict.get("tracker", {}))
-
-    # Init collision guard
-    logging.info("Initializing Forward warning")
-    guard = ForwardCollisionGuard.from_dict(config_dict.get("fcw", {}))
-
-    # Load camera calibration
-    logging.info("Loading camera configuration {cfg}".format(cfg=args.camera.name))
-    camera_dict = yaml.safe_load(args.camera)
-    camera = Camera.from_dict(camera_dict)
-
-    # Open video
+     # Open video
     logging.info("Opening video {vid}".format(vid=args.source_video))
     video = cv2.VideoCapture(args.source_video, cv2.CAP_FFMPEG)
     fps = video.get(cv2.CAP_PROP_FPS)
@@ -66,7 +50,26 @@ if __name__ == "__main__":
     shape = height, width
     logging.info("Video {W}x{H}, {fps} FPS".format(W=width, H=height, fps=fps))
 
+    # Init object detector
+    detector = YOLODetector.from_dict(config_dict.get("detector", {}))
+
+    # Init image tracker
+    logging.info("Initializing image tracker")
+    tracker = Sort.from_dict(config_dict.get("tracker", {}))
+    tracker.dt = 1 / fps
+
+    # Init collision guard
+    logging.info("Initializing Forward warning")
+    guard = ForwardCollisionGuard.from_dict(config_dict.get("fcw", {}))
     guard.dt = 1 / fps  # Finish setup if the guard
+
+    # Load camera calibration
+    logging.info("Loading camera configuration {cfg}".format(cfg=args.camera.name))
+    camera_dict = yaml.safe_load(args.camera)
+    camera = Camera.from_dict(camera_dict)
+
+   
+
 
     render_output = args.viz or args.output is not None
     if render_output:
