@@ -207,10 +207,10 @@ def cog_logo(size: tuple = (256, 256)):
     return bg
 
 
-def vehicle_marker_image():
+def vehicle_marker_image(scale: int = 1):
     marker_image = Image.open("../data/marker.png")
     w,h = marker_image.size
-    return marker_image.resize((w*3, h*3), Image.NEAREST)
+    return marker_image.resize((w*scale, h*scale), Image.NEAREST), (7*scale, 0)
  
 
 def mark_vehicles(size: tuple, objects:Iterable[PointWorldObject], camera: Camera, marker: Image, anchor:tuple = (0,0)):
