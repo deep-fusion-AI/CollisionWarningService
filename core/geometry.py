@@ -5,6 +5,7 @@ from cv2.fisheye import (
     estimateNewCameraMatrixForUndistortRectify as estimateCameraMatrix,
     initUndistortRectifyMap,
     undistortPoints,
+    distortPoints,
 )
 from numpy.linalg import inv
 from shapely.geometry import LineString, Point
@@ -75,23 +76,22 @@ class Camera:
 
     def rectify_image(self, image):
         map1, map2 = self.maps
-        img = cv2.GaussianBlur(image, (7, 7), 2)
+        img = cv2.GaussianBlur(image, (3, 3), 0.5)
         return cv2.remap(img, map1, map2, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
 
     def rectify_points(self, x):
         y = undistortPoints(x.reshape(1, -1, 2), self.K, self.D, P=self.K_new)
         return y[0]
 
-    # def unrectify_points(self, x):
-    #     """
-    #     x : (n,2) in K_new
-    #     """
-    #     n = x.shape[0]
-    #     x = np.vstack([x.T, np.ones((1,n))]).astype(np.float32)
-
-    #     x_norm = inv(self.K_new) @ x 
-    #     y = distortPoints(x_norm.reshape(1,-1,2), self.K, self.D)
-    #     return y[0]
+    def unrectify_points(self, x):
+        """
+        x : (n,2) in K_new
+        """
+        n = x.shape[0]
+        x = np.vstack([x.T, np.ones((1,n))]).astype(np.float32)
+        x_norm = inv(self.K_new) @ x 
+        y = distortPoints(x_norm.reshape(1,-1,2), self.K, self.D)
+        return y[0]
 
     @staticmethod
     def from_dict(d: dict) -> "Camera":
@@ -108,12 +108,12 @@ class Camera:
 
         # Estimate rotation matrix
         # Get points on horizon or simply one point in image center
-        h_points = d.get("horizon_points", [(w / 2, h / 2)])
-        if len(h_points) == 1:  # Single point case - add second point on the same line
-            x, y = h_points[0]
-            h_points.append((x + 100, y))
+        h_points = np.atleast_2d(d.get("horizon_points", [(w / 2, h / 2)])).astype(np.float32)
         # Get undistorted coords of the points
-        h_points = cam.rectify_points(np.array(h_points, "f"))
+        h_points = cam.rectify_points(h_points)
+        if h_points.shape[0] == 1:  # Single point case - add second point on the same line
+            x, y = h_points[0]
+            h_points = np.vstack([h_points, (x + 100, y)])
         # Line segment in undistorted image defining the horizon
         x1, y1, x2, y2 = line_segment(fit_line(h_points), 0, rw)
         # Represent horizon as LineString - convenient for geometric processing

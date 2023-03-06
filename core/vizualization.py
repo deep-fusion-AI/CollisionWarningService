@@ -90,7 +90,7 @@ def draw_world_objects(
             draw.line([(x-10,y),(x+10,y)], fill=(255,255,0,128), width=3)
             draw.line([(x,y-10),(x,y+10)], fill=(255,255,0,128), width=3)
 
-        X = np.array(o.future_path().coords)
+        X = np.array(o.future_path(5).coords)
         n = X.shape[0]
         X = np.hstack([X, np.zeros((n,1))])
         scr_loc, _ = camera.project_points(X,near=5)
@@ -117,6 +117,32 @@ def draw_danger_zone(size: tuple, camera: Camera, zone: Polygon):
     scr_loc, _ = camera.project_points(X,near=-100)
     scr_loc = list(map(tuple, scr_loc))
     draw.polygon(scr_loc, fill=(255,255,0,32), outline=(255,255,0,128))
+
+    return image
+
+
+
+
+def draw_world_coordinate_system(size: tuple, camera: Camera):
+    image = Image.new("RGBA", size)
+    draw = ImageDraw.Draw(image)
+
+    def draw_line_string(ls: LineString, accuracy:float=0.01, **kwargs):
+        n = int(np.ceil(1/accuracy))
+        coords = [
+            ls.interpolate(t, normalized=True).xy for t in np.linspace(0,1,n)
+        ]
+        X = np.hstack(coords)
+        X = np.vstack([X, np.zeros((1,n)) ])
+        x,_ = camera.project_points(X.T, near=1)
+        draw.line(list(map(tuple, x)), **kwargs)
+
+
+    for x in np.linspace(-20, 20, 41):
+        draw_line_string(LineString( [(x, -20),(x, 20)] ), fill=(255,0,0) )
+
+    for y in np.linspace(-20, 20, 41):
+        draw_line_string(LineString( [(-20, y),(20, y)] ), fill=(0,255,0) )
 
     return image
 
@@ -181,64 +207,20 @@ def cog_logo(size: tuple = (256, 256)):
     return bg
 
 
-# def draw_tracked_objects(d: ImageDraw.ImageDraw, tracked_objects: dict):
-#     for tid, t in tracked_objects.items():
-#         x1, y1, x2, y2 = t.get_state()[0]
-#         color = (0, 255, 0, 64)
-#         d.rectangle((x1, y1, x2, y2), fill=color, outline=None, width=0.5)
-#         # label = f"track {tid}"
-#         # _, _, tw, th = font.getbbox(label, stroke_width=1)
-#         # tw, th = tw + 4, th + 4
-#         # d.rectangle((x1, y1 - th, x1 + tw, y1), fill=(0, 0, 0))
-#         # d.text((x1 + 3, y1 - th + 2), label, fill=(255, 255, 255), font=font, stroke_width=0)
+def vehicle_marker_image():
+    marker_image = Image.open("../data/marker.png")
+    w,h = marker_image.size
+    return marker_image.resize((w*3, h*3), Image.NEAREST)
+ 
 
-
-
-#   # Visualization
-#         base = Image.fromarray(img_undistorted[..., ::-1], "RGB").convert("RGBA")
-#         objects_image = Image.new("RGBA", base.size)
-#         osd_image = Image.new("RGBA", base.size)
-
-#         osd_draw = ImageDraw.Draw(osd_image)
-#         draw_horizon(osd_draw, camera, fill=(255, 255, 0, 128), width=1)
-
-#         objects_draw = ImageDraw.Draw(objects_image)
-
-#        
-#         draw_tracked_objects(objects_draw, tracked_objects)
-
-#         for tid, o in dangerous_objects.items():
-#             x1, y1, x2, y2 = tracked_objects[tid].get_state()[0]
-#             # objects_draw.rectangle([x1, y1, x2, y2], outline=(255, 0, 0), width=2)
-#             objects_draw.rectangle((x1, y1, x2, y2), fill=(255, 0, 0, 64))
-#             dist = Point(o.location).distance(guard.vehicle_zone)
-#             info = f"{dist:.1f} m"
-#             objects_draw.text(
-#                 (0.5 * (x1 + x2), 0.5 * (y1 + y2)), info, align="center", font=font,
-#                 stroke_fill=(255, 255, 255), stroke_width=1, fill=(0, 0, 0)
-#                 )
-            
-#         for tid, o in guard.objects.items():
-#             X = np.atleast_2d([o.kf.x[0,0],o.kf.x[3,0],0])
-#             scr_loc, _ = camera.project_points(X)
-#             if scr_loc.size > 0:
-#                 x,y = scr_loc[0]
-#                 objects_draw.line([(x-10,y),(x+10,y)], fill=(255,255,0,128), width=3)
-#                 objects_draw.line([(x,y-10),(x,y+10)], fill=(255,255,0,128), width=3)
-
-#             X = np.array(o.future_path().coords)
-#             n = X.shape[0]
-#             X = np.hstack([X, np.zeros((n,1))])
-#             scr_loc, _ = camera.project_points(X,near=5)
-#             scr_loc = list(map(tuple, scr_loc))
-#             objects_draw.line(scr_loc, fill=(0,255,0,255), width=1)
-
-
-            
-
-#         display = Image.alpha_composite(objects_image, osd_image)
-#         out = Image.alpha_composite(base, display).convert("RGB")
-
-#         cv_image = np.array(out)[..., ::-1]
-#         cv2.imshow("FCW", cv_image)
-#         cv2.waitKey(1)
+def mark_vehicles(size: tuple, objects:Iterable[PointWorldObject], camera: Camera, marker: Image, anchor:tuple = (0,0)):
+    image = Image.new("RGBA", size, color=(0,0,0,0))
+    ax,ay = anchor
+    # loc (N,2) xy
+    for o in objects:
+        X = np.atleast_2d([o.kf.x[0,0],o.kf.x[3,0],0])
+        scr_loc, _ = camera.project_points(X, near=1, to_rectified=False)
+        if scr_loc.shape[0] > 0:
+            x,y = scr_loc[0]
+            image.paste(marker, (int(x-ax), int(y-ay)))
+    return image
