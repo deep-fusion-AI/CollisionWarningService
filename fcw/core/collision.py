@@ -1,5 +1,6 @@
 import logging
 from typing import Dict
+from dataclasses import dataclass
 
 import numpy as np
 from filterpy.common import Q_discrete_white_noise
@@ -30,7 +31,7 @@ def object_tracker(x_init, dt: float = 1):
          [0, 0, 0, 1, 0, 0]]
     )  # Measurement function
 
-    kf.P = np.diag([1, 2, 4, 1, 2, 4]) * 100
+    kf.P = np.diag([1, 2, 400, 1, 2, 400]) * 10
     z_std = 2
     kf.R = np.diag([z_std ** 2, z_std ** 2])  # 1 standard
     kf.Q = Q_discrete_white_noise(dim=3, dt=dt, var=0.5e-1**2, block_size=2) # process uncertainty
@@ -62,7 +63,7 @@ class PointWorldObject:
 
     def update(self, location=None):
         self.kf.predict()
-        self.kf.update(location, R=covariance(location, sigma=0.05, scale=0.2))
+        self.kf.update(location, R=covariance(location, sigma=0.1, scale=0.1))
         self.xy = np.dot(self.kf.H, self.kf.x).T[0]
         self.vxvy = np.dot(np.array([[0, 1, 0, 0, 0, 0], [0, 0, 0, 0, 1, 0]]), self.kf.x).T[0]
 
@@ -190,3 +191,78 @@ class ForwardCollisionGuard:
                 self.prediction_length, self.prediction_step
             ).intersects(self.danger_zone)
         }
+
+    def label_objects(
+            self,
+            include_distant: bool = False,
+        ):
+        """
+        Check future paths of objects and filter dangerous ones
+        """
+        for tid, obj in self.objects.items():
+            if obj.xy is None: continue
+
+            loc = Point(obj.location)
+            dist = loc.distance(self.vehicle_zone)
+            
+            if dist > self.safety_radius and not include_distant:
+                continue
+
+            path = obj.future_path(self.prediction_length, self.prediction_step)
+            collision_point_distance = intersection_point(path, self.vehicle_zone.boundary)
+            if collision_point_distance is not None:
+                ttc = (collision_point_distance / path.length) * self.prediction_length
+            else:
+                ttc = None
+
+            yield ObjectStatus(
+                distance=dist,
+                location=loc,
+                path=path,
+                is_in_danger_zone=self.danger_zone.contains(loc),
+                crosses_danger_zone=path.crosses(self.danger_zone),
+                time_to_collision=ttc,
+            )
+            
+
+@dataclass
+class ObjectStatus:
+    # Distance from the reference point to vehicle zone
+    distance: float
+    # Location relative to vehicle reference point
+    location: Point
+    path: LineString
+    # Flag indicating object in danger zone
+    is_in_danger_zone: bool
+    # Flag indicating if object path crosses danger zone
+    crosses_danger_zone: bool
+    # Time for reference point to reach vehicle zone. If None, does not reach vehicle
+    time_to_collision: float
+    
+    @property
+    def is_colliding(self):
+        return self.time_to_collision is not None
+    
+    @property
+    def is_dangerous(self):
+        """
+        Dangerous objects
+        """
+        danger = self.is_in_danger_zone
+        collision = self.time_to_collision is not None and self.time_to_collision < 1
+        return danger or collision
+
+    
+    
+
+from more_itertools import  pairwise
+
+def intersection_point(ls:LineString, p:LineString):
+    coords = ls.coords
+    d = 0
+    for a,b in pairwise(coords):
+        l = LineString([a,b])
+        pt = l.intersection(p)
+        if not pt.is_empty:
+            return Point(a).distance(pt) + d
+        d += l.length
