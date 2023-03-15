@@ -17,7 +17,7 @@ import numpy as np
 import torch
 from shapely.geometry import box
 
-from detection import ObjectObservation
+from fcw.core.detection import ObjectObservation
 
 
 class YOLODetector:

@@ -1,0 +1,15 @@
+[tool.poetry]
+name = "collision-warning-service"
+version = "0.1.0"
+description = "Early collision warning Network Application for Transportation use case"
+authors = ["Petr Kleparnik <pkleparnik@cognitechna.cz>", "Roman Juranek <rjuranek@cognitechna.cz>"]
+readme = "README.md"
+packages = [{include = "fcw"}]
+
+[tool.poetry.dependencies]
+python = "^3.8"
+
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

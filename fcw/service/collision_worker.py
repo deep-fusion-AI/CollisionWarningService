@@ -1,24 +1,25 @@
 import flask_socketio
 from queue import Queue
 
-from core.yolo_detector import YOLODetector
-from core.sort import Sort
-from core.detection import *
-from core.collision import *
+from fcw.core.yolo_detector import YOLODetector
+from fcw.core.sort import Sort
+from fcw.core.collision import *
+from fcw.core.detection import *
 
 from era_5g_object_detection_common.image_detector import ImageDetector
 from era_5g_object_detection_standalone.worker import Worker
 
 
 class CollisionWorker(Worker, ImageDetector):
-    def __init__(self,
-                 image_queue: Queue,
-                 app,
-                 config: dict,
-                 camera_config: dict,
-                 fps: float,
-                 **kw
-                 ):
+    def __init__(
+        self,
+        image_queue: Queue,
+        app,
+        config: dict,
+        camera_config: dict,
+        fps: float,
+        **kw
+        ):
         super().__init__(image_queue=image_queue, app=app, **kw)
 
         logging.info("Initializing object detector")
@@ -32,6 +33,7 @@ class CollisionWorker(Worker, ImageDetector):
         self.camera = Camera.from_dict(camera_config)
 
     def process_image(self, image):
+        return {}
         # Detect object in image
         detections = self.detector.detect(image)
         # Get bounding boxes as numpy array
@@ -73,9 +75,10 @@ class CollisionWorker(Worker, ImageDetector):
                     det["score"] = dist
                 detections.append(det)
 
-                #det["class"] = result.label
-                #det["class_name"] = self.detector.model.names[result.label]
+                # det["class"] = result.label
+                # det["class_name"] = self.detector.model.names[result.label]
 
+            # TODO:check timestamp exists
             r = {"timestamp": metadata["timestamp"],
                  "detections": detections}
 

@@ -50,9 +50,9 @@ class Camera:
 
         # Rectification parameters
         self.K_new = estimateCameraMatrix(
-            self.K, self.D, self.image_size, np.eye(3), new_size=self.rectified_size, fov_scale=1.2
+            self.K, self.D, tuple(self.image_size), np.eye(3), new_size=tuple(self.rectified_size), fov_scale=1.2
         )
-        self.maps = initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K_new, self.rectified_size, cv2.CV_32F)
+        self.maps = initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K_new, tuple(self.rectified_size), cv2.CV_32F)
 
         # view_direction = d.get("view_direction", "x")
         # R = np.eye(4)

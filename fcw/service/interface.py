@@ -7,6 +7,7 @@ import numpy as np
 import flask_socketio
 from flask import Flask, Response, request, session
 from flask_session import Session
+import logging
 
 from era_5g_interface.task_handler_gstreamer_internal_q import \
     TaskHandlerGstreamerInternalQ, TaskHandlerGstreamer
@@ -51,15 +52,16 @@ def register():
     # print(f"register {session.sid} {session}")
     # print(f"{request}")
     args = request.get_json(silent=True)
+    print(args)
     gstreamer = False
     config = {}
     camera_config = {}
-    fps = 0
+    fps = 30
     if args:
         gstreamer = args.get("gstreamer", False)
         config = args.get("config", {})
         camera_config = args.get("camera_config", {})
-        fps = args.get("fps", 0)
+        fps = args.get("fps", 30)
         print(f"Config: {config}")
         print(f"Camera config: {camera_config}")
         print(f"FPS: {fps}")
@@ -187,6 +189,9 @@ def get_ports_range(ports_range):
 
 
 def main(args=None):
+
+    logging.getLogger().setLevel(logging.INFO)
+
     parser = argparse.ArgumentParser(description='Standalone variant of object detection NetApp')
     parser.add_argument(
         '--ports',

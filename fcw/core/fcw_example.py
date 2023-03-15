@@ -11,11 +11,11 @@ from yolo_detector import YOLODetector
 # os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 
 # Configuration of the algorithm
-config = Path("../config/config.yaml")
+config = Path("../../config/config.yaml")
 
 # Camera settings - specific for the particular input
-camera_config = Path("../videos/video3.yaml")
-video_file = Path("../videos/video3.mp4").as_posix()
+camera_config = Path("../../videos/video3.yaml")
+video_file = Path("../../videos/video3.mp4").as_posix()
 
 # video_file = "rtp://localhost:1234/"
 
@@ -143,10 +143,12 @@ if __name__ == "__main__":
 
         display = Image.alpha_composite(objects_image, osd_image)
         out = Image.alpha_composite(base, display).convert("RGB")
-
         cv_image = np.array(out)[..., ::-1]
-        cv2.imshow("FCW", cv_image)
-        cv2.waitKey(1)
+        try:
+            cv2.imshow("FCW", cv_image)
+            cv2.waitKey(1)
+        except Exception as ex:
+            print(ex)
 
     #     output.write(cv_image)
 
