@@ -9,7 +9,7 @@ from typing import Union
 from std_msgs.msg import String
 from sensor_msgs.msg import Image
 
-from fcw.client.client_common import CollisionWarningClient
+from fcw.client_python.client_common import CollisionWarningClient
 
 collision_warning_client: Union[CollisionWarningClient, None] = None
 publisher: Union[Publisher, None] = None
