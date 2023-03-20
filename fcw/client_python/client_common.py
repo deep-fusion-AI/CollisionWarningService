@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import math
 import os
 import time
 from pathlib import Path
@@ -13,10 +12,10 @@ import cv2
 import numpy as np
 import yaml
 
-from fcw.core.geometry import Camera
 from era_5g_client.client_base import NetAppClientBase
 from era_5g_client.data_sender_gstreamer import DataSenderGStreamer
 from era_5g_client.dataclasses import NetAppLocation
+from fcw.core.geometry import Camera
 
 image_storage: Dict[str, np.ndarray] = dict()
 timestamps: Dict[str, int] = dict()

@@ -4,18 +4,16 @@ Early Collision Warning system
 
 import logging
 from argparse import ArgumentParser, FileType
-from pathlib import Path
 
 import cv2
-import numpy as np
 import yaml
-from collision import ForwardCollisionGuard, get_reference_points
+
+from collision import get_reference_points
 from detection import detections_to_numpy
-from geometry import Camera
-from PIL import Image
 from sort import Sort
 from vizualization import *
 from yolo_detector import YOLODetector
+
 
 # os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 
@@ -34,14 +32,14 @@ def parse_arguments():
 
 if __name__ == "__main__":
     args = parse_arguments()
-    
+
     logging.basicConfig(level=logging.INFO)
     logging.info("Starting Forward Collision Guard")
 
     logging.info("Loading configuration file {cfg}".format(cfg=args.config.name))
     config_dict = yaml.safe_load(args.config)
 
-     # Open video
+    # Open video
     logging.info("Opening video {vid}".format(vid=args.source_video))
     video = cv2.VideoCapture(args.source_video, cv2.CAP_FFMPEG)
     fps = video.get(cv2.CAP_PROP_FPS)
@@ -68,9 +66,6 @@ if __name__ == "__main__":
     camera_dict = yaml.safe_load(args.camera)
     camera = Camera.from_dict(camera_dict)
 
-   
-
-
     render_output = args.viz or args.output is not None
     if render_output:
         logging.warning("RENDERING OUTPUT - LOWER PERFOMANCE")
@@ -87,7 +82,7 @@ if __name__ == "__main__":
         coord_sys = draw_world_coordinate_system(camera.rectified_size, camera)
         coord_sys.putalpha(64)
         danger_zone = draw_danger_zone(camera.rectified_size, camera, guard.danger_zone)
-        horizon = draw_horizon(camera.rectified_size, camera, width=1, fill=(255,255,0,64))
+        horizon = draw_horizon(camera.rectified_size, camera, width=1, fill=(255, 255, 0, 64))
         marker, marker_anchor = vehicle_marker_image(scale=3)
 
     # FCW Loop
@@ -132,18 +127,18 @@ if __name__ == "__main__":
             # Compose layers together
             compose_layers(base_undistorted, *layers)
             O = list(guard.label_objects(include_distant=True))
-            w,h  = base.size
-            w1,h1 = base_undistorted.size
+            w, h = base.size
+            w1, h1 = base_undistorted.size
             compose_layers(
-                base,   # Original image
-                (tracking_info((w,16), O), (0,0)),
+                base,  # Original image
+                (tracking_info((w, 16), O), (0, 0)),
                 (mark_vehicles(camera.image_size, guard.objects.values(), camera, marker, marker_anchor), None),
-                (logo, (8,16+8)),
-                (base_undistorted, (8, h-h1-8)),  # Pic with rectified image and vizualized trackers
+                (logo, (8, 16 + 8)),
+                (base_undistorted, (8, h - h1 - 8)),  # Pic with rectified image and vizualized trackers
             )
             # Convert to OpenCV for display
-            cv_image = np.array(base.convert("RGB"))[...,::-1]
-        
+            cv_image = np.array(base.convert("RGB"))[..., ::-1]
+
         if args.viz:
             # Display the image
             cv2.imshow("FCW", cv_image)

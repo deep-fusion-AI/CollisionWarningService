@@ -1,13 +1,13 @@
-import flask_socketio
 from queue import Queue
 
-from fcw.core.yolo_detector import YOLODetector
-from fcw.core.sort import Sort
-from fcw.core.collision import *
-from fcw.core.detection import *
+import flask_socketio
 
 from era_5g_object_detection_common.image_detector import ImageDetector
 from era_5g_object_detection_standalone.worker import Worker
+from fcw.core.collision import *
+from fcw.core.detection import *
+from fcw.core.sort import Sort
+from fcw.core.yolo_detector import YOLODetector
 
 
 class CollisionWorker(Worker, ImageDetector):
@@ -19,7 +19,7 @@ class CollisionWorker(Worker, ImageDetector):
         camera_config: dict,
         fps: float,
         **kw
-        ):
+    ):
         super().__init__(image_queue=image_queue, app=app, **kw)
 
         logging.info("Initializing object detector")
@@ -33,7 +33,6 @@ class CollisionWorker(Worker, ImageDetector):
         self.camera = Camera.from_dict(camera_config)
 
     def process_image(self, image):
-        return {}
         # Detect object in image
         detections = self.detector.detect(image)
         # Get bounding boxes as numpy array
@@ -57,8 +56,8 @@ class CollisionWorker(Worker, ImageDetector):
         Publishes the results to the robot
 
         Args:
+            tracked_objects (_type_): The results of the detection.
             metadata (_type_): NetApp-specific metadata related to processed image.
-            results (_type_): The results of the detection.
         """
         # Get list of current offenses
         dangerous_objects = self.guard.dangerous_objects()

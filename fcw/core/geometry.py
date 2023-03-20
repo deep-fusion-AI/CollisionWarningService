@@ -53,7 +53,9 @@ class Camera:
         self.K_new = estimateCameraMatrix(
             self.K, self.D, tuple(self.image_size), np.eye(3), new_size=tuple(self.rectified_size), fov_scale=1.2
         )
-        self.maps = initUndistortRectifyMap(self.K, self.D, np.eye(3), self.K_new, tuple(self.rectified_size), cv2.CV_32F)
+        self.maps = initUndistortRectifyMap(
+            self.K, self.D, np.eye(3), self.K_new, tuple(self.rectified_size), cv2.CV_32F
+        )
 
         # view_direction = d.get("view_direction", "x")
         # R = np.eye(4)
@@ -88,9 +90,9 @@ class Camera:
         x : (n,2) in K_new
         """
         n = x.shape[0]
-        x = np.vstack([x.T, np.ones((1,n))]).astype(np.float32)
-        x_norm = inv(self.K_new) @ x 
-        y = distortPoints(x_norm.reshape(1,-1,2), self.K, self.D)
+        x = np.vstack([x.T, np.ones((1, n))]).astype(np.float32)
+        x_norm = inv(self.K_new) @ x
+        y = distortPoints(x_norm.reshape(1, -1, 2), self.K, self.D)
         return y[0]
 
     @staticmethod

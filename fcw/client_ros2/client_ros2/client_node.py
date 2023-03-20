@@ -1,13 +1,13 @@
-import rclpy
-from rclpy.node import Publisher
-import sys, os
-import cv2
-from cv_bridge import CvBridge
+import sys
 from pathlib import Path
 from typing import Union
 
-from std_msgs.msg import String
+import cv2
+import rclpy
+from cv_bridge import CvBridge
+from rclpy.node import Publisher
 from sensor_msgs.msg import Image
+from std_msgs.msg import String
 
 from fcw.client_python.client_common import CollisionWarningClient
 
@@ -15,7 +15,6 @@ collision_warning_client: Union[CollisionWarningClient, None] = None
 publisher: Union[Publisher, None] = None
 
 bridge = CvBridge()
-
 
 # Configuration of the algorithm
 config = Path("../../config/config.yaml")
@@ -50,7 +49,9 @@ def main(args=None) -> None:
     global collision_warning_client, publisher
 
     publisher = node.create_publisher(String, "/results", 10)
-    collision_warning_client = CollisionWarningClient(config=config, camera_config=camera_config, fps=30, results_callback=results_callback)
+    collision_warning_client = CollisionWarningClient(
+        config=config, camera_config=camera_config, fps=30, results_callback=results_callback
+    )
     subscriber = node.create_subscription(Image, "/image", send_image_callback, 10)
 
     try:

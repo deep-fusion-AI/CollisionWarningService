@@ -1,19 +1,19 @@
+import argparse
+import logging
+import os
 import secrets
 from queue import Queue
+
 import cv2
-import argparse
-import os
-import numpy as np
 import flask_socketio
+import numpy as np
 from flask import Flask, Response, request, session
 from flask_session import Session
-import logging
 
+from collision_worker import CollisionWorker
 from era_5g_interface.task_handler_gstreamer_internal_q import \
     TaskHandlerGstreamerInternalQ, TaskHandlerGstreamer
 from era_5g_interface.task_handler_internal_q import TaskHandlerInternalQ
-
-from collision_worker import CollisionWorker
 
 # port of the netapp's server
 NETAPP_PORT = os.getenv("NETAPP_PORT", 5896)
@@ -88,7 +88,7 @@ def register():
         config, camera_config, fps,
         name="Detector",
         daemon=True
-        )
+    )
 
     tasks[session.sid] = {"task_handler": task,
                           "worker": worker}
@@ -189,7 +189,6 @@ def get_ports_range(ports_range):
 
 
 def main(args=None):
-
     logging.getLogger().setLevel(logging.INFO)
 
     parser = argparse.ArgumentParser(description='Standalone variant of object detection NetApp')
@@ -198,7 +197,7 @@ def main(args=None):
         default="5001:5003",
         help="Specify the range of ports available for gstreamer connections. Format "
              "port_start:port_end. Default is 5001:5003."
-        )
+    )
     args = parser.parse_args()
     global free_ports
     try:

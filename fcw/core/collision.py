@@ -34,20 +34,22 @@ def object_tracker(x_init, dt: float = 1):
     kf.P = np.diag([1, 2, 400, 1, 2, 400]) * 10
     z_std = 2
     kf.R = np.diag([z_std ** 2, z_std ** 2])  # 1 standard
-    kf.Q = Q_discrete_white_noise(dim=3, dt=dt, var=0.5e-1**2, block_size=2) # process uncertainty
+    kf.Q = Q_discrete_white_noise(dim=3, dt=dt, var=0.5e-1 ** 2, block_size=2)  # process uncertainty
     kf._alpha_sq = 1
     x, y = x_init
     kf.x[0] = x
     kf.x[3] = y
     return kf
 
+
 def covariance(xy: np.ndarray, sigma: float = 0.1, scale: float = 0.1):
     d = np.linalg.norm(xy)
-    x,y = xy
+    x, y = xy
     th = np.arctan2(y, x)
     c, s = np.cos(th), np.sin(th)
     M = np.array([[c, -s], [s, c]])
     return M @ (np.diag([1, scale]) * sigma * d)
+
 
 class PointWorldObject:
     """
@@ -193,9 +195,9 @@ class ForwardCollisionGuard:
         }
 
     def label_objects(
-            self,
-            include_distant: bool = False,
-        ):
+        self,
+        include_distant: bool = False,
+    ):
         """
         Check future paths of objects and filter dangerous ones
         """
@@ -204,7 +206,7 @@ class ForwardCollisionGuard:
 
             loc = Point(obj.location)
             dist = loc.distance(self.vehicle_zone)
-            
+
             if dist > self.safety_radius and not include_distant:
                 continue
 
@@ -223,7 +225,7 @@ class ForwardCollisionGuard:
                 crosses_danger_zone=path.crosses(self.danger_zone),
                 time_to_collision=ttc,
             )
-            
+
 
 @dataclass
 class ObjectStatus:
@@ -238,11 +240,11 @@ class ObjectStatus:
     crosses_danger_zone: bool
     # Time for reference point to reach vehicle zone. If None, does not reach vehicle
     time_to_collision: float
-    
+
     @property
     def is_colliding(self):
         return self.time_to_collision is not None
-    
+
     @property
     def is_dangerous(self):
         """
@@ -252,16 +254,15 @@ class ObjectStatus:
         collision = self.time_to_collision is not None and self.time_to_collision < 1
         return danger or collision
 
-    
-    
 
-from more_itertools import  pairwise
+from more_itertools import pairwise
 
-def intersection_point(ls:LineString, p:LineString):
+
+def intersection_point(ls: LineString, p: LineString):
     coords = ls.coords
     d = 0
-    for a,b in pairwise(coords):
-        l = LineString([a,b])
+    for a, b in pairwise(coords):
+        l = LineString([a, b])
         pt = l.intersection(p)
         if not pt.is_empty:
             return Point(a).distance(pt) + d

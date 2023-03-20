@@ -108,7 +108,7 @@ class KalmanBoxTracker(object):
         )
 
         # 4x4 xysr
-        self.kf.R = np.diag([1,1,5,5]) * 0.1
+        self.kf.R = np.diag([1, 1, 5, 5]) * 0.1
         # 7x7 x,y,s,r,dx,dy,ds
         self.kf.P[4:, 4:] *= 100.  # give high uncertainty to the unobservable initial velocities
         self.kf.P *= 1

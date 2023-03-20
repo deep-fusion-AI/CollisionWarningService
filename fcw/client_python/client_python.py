@@ -57,6 +57,7 @@ def main() -> None:
                 raise Exception("Cannot open video file")
         fps = cap.get(cv2.CAP_PROP_FPS)
 
+        # gstreamer True or False
         collision_warning_client = CollisionWarningClient(
             config=config, camera_config=camera_config, fps=fps, gstreamer=True
         )
