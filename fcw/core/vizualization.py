@@ -12,7 +12,7 @@ from collision import PointWorldObject, ObjectStatus
 from geometry import Camera
 
 # Font for OSD
-_font = ImageFont.truetype("../data/UbuntuMono-R.ttf", 14, encoding="unic")
+_font = ImageFont.truetype("../../data/UbuntuMono-R.ttf", 14, encoding="unic")
 
 
 # def segmentize(p: LineString, max_dist=10):
@@ -188,7 +188,7 @@ def cog_logo(size: tuple = (256, 256)):
     """
     Cognitechna logo image
     """
-    logo = Image.open("../data/cog_logo.png").convert(
+    logo = Image.open("../../data/cog_logo.png").convert(
         "RGBA"
     )  # FIXME location data in the package not relative to `pwd`
     w, h = logo.size
@@ -207,7 +207,7 @@ def cog_logo(size: tuple = (256, 256)):
 
 
 def vehicle_marker_image(scale: int = 1):
-    marker_image = Image.open("../data/marker.png")
+    marker_image = Image.open("../../data/marker.png")
     w, h = marker_image.size
     return marker_image.resize((w * scale, h * scale), Image.NEAREST), (7 * scale, 0)
 

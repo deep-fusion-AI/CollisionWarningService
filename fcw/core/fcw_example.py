@@ -8,7 +8,7 @@ from argparse import ArgumentParser, FileType
 import cv2
 import yaml
 
-from collision import get_reference_points
+from collision import get_reference_points, ForwardCollisionGuard
 from detection import detections_to_numpy
 from sort import Sort
 from vizualization import *
