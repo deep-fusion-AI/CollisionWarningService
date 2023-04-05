@@ -7,6 +7,7 @@ from pathlib import Path
 from queue import Queue
 from threading import Event, Thread
 from typing import Any, Dict, Callable, Optional
+from enum import Enum
 
 import cv2
 import numpy as np
@@ -44,12 +45,15 @@ class ResultsViewer(Thread):
             if not results_storage.empty():
                 results = results_storage.get(timeout=1)
                 timestamp_str = results["timestamp"]
+                recv_timestamp_str = results["recv_timestamp"]
                 timestamp = int(timestamp_str)
+                recv_timestamp = int(recv_timestamp_str)
                 if timestamp_str in timestamps:
                     timestamp = timestamps.pop(timestamp_str)
                 if DEBUG_PRINT_DELAY:
                     time_now = results["results_timestamp"]
                     print(f"Delay: {(time_now - timestamp) * 1.0e-9:.3f}s ")
+                    print(f"Delay recv: {(time_now - recv_timestamp) * 1.0e-9:.3f}s ")
                 try:
                     frame = image_storage.pop(timestamp_str)
                     detections = results["detections"]
@@ -94,9 +98,15 @@ def get_results(results: Dict[str, Any]) -> None:
         results (str): The results in json format
     """
     results_timestamp = time.time_ns()
-    print(results)
+    # print(results)
     if "timestamp" in results:
         results_storage.put(dict(results, **{"results_timestamp": results_timestamp}), block=False)
+
+
+class StreamType(Enum):
+    GSTREAMER = 1,
+    WEBSOCKETS = 2,
+    HTTP = 3,
 
 
 class CollisionWarningClient:
@@ -106,8 +116,8 @@ class CollisionWarningClient:
         config: Path = None,
         camera_config: Path = None,
         fps: float = 30,
-        results_callback: Callable = None,
-        gstreamer: bool = False
+        results_callback: Optional[Callable] = None,
+        stream_type: Optional[StreamType] = StreamType.HTTP,
     ):
         logging.info("Loading configuration file {cfg}".format(cfg=config))
         self.config_dict = yaml.safe_load(config.open())
@@ -122,12 +132,12 @@ class CollisionWarningClient:
             self.results_callback = get_results
             self.results_viewer = ResultsViewer(name="results_viewer", daemon=True)
             self.results_viewer.start()
-        self.gstreamer = gstreamer
+        self.stream_type = stream_type
         self.frame_id = 0
 
         self.client = NetAppClientBase(self.results_callback)
 
-        if self.gstreamer:
+        if self.stream_type is StreamType.GSTREAMER:
             # register the client with the NetApp with gstreamer extension
             self.client.register(
                 NetAppLocation(NETAPP_ADDRESS, NETAPP_PORT),
@@ -142,6 +152,13 @@ class CollisionWarningClient:
             self.data_sender_gstreamer = DataSenderGStreamer(
                 self.client.netapp_location.address, self.client.gstreamer_port, self.fps, width, height
             )
+        elif self.stream_type is StreamType.WEBSOCKETS:
+            # register the client with the NetApp  without gstreamer extension
+            self.client.register(
+                NetAppLocation(NETAPP_ADDRESS, NETAPP_PORT),
+                ws_data=True,
+                args={"config": self.config_dict, "camera_config": self.camera_config_dict, "fps": self.fps}
+            )
         else:
             # register the client with the NetApp  without gstreamer extension
             self.client.register(
@@ -150,18 +167,27 @@ class CollisionWarningClient:
             )
 
     def send_image(self, frame: np.ndarray, timestamp: Optional[str] = None):
+        time0 = time.time_ns()
+        frame_undistorted = self.camera.rectify_image(frame)
+        time1 = time.time_ns()
+        time_elapsed_s = (time1 - time0) * 1.0e-9
+        print(f"rectify_image time: {time_elapsed_s:.3f}")
         if not timestamp:
             timestamp = time.time_ns()
-        frame_undistorted = self.camera.rectify_image(frame)
         timestamp_str = str(timestamp)
         # TODO: can overflow?
         self.frame_id += 1
+        # print(f"{self.frame_id} {timestamp}")
         # TODO: timestamp with gstreamer
-        if self.gstreamer:
+        if self.stream_type is StreamType.GSTREAMER:
             self.data_sender_gstreamer.send_image(frame_undistorted)
             if self.results_callback is get_results:
                 image_storage[str(self.frame_id)] = frame_undistorted
                 timestamps[str(self.frame_id)] = timestamp
+        elif self.stream_type is StreamType.WEBSOCKETS:
+            self.client.send_image_ws(frame_undistorted, timestamp_str)
+            if self.results_callback is get_results:
+                image_storage[timestamp_str] = frame_undistorted
         else:
             self.client.send_image_http(frame_undistorted, timestamp_str, 5)
             if self.results_callback is get_results:
@@ -172,5 +198,5 @@ class CollisionWarningClient:
             self.results_viewer.stop()
         if self.client is not None:
             self.client.disconnect()
-        if self.gstreamer:
+        if self.stream_type is StreamType.GSTREAMER:
             self.data_sender_gstreamer.out.release()

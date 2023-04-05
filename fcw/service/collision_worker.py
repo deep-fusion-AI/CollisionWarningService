@@ -78,7 +78,7 @@ class CollisionWorker(Worker, ImageDetector):
                 # det["class_name"] = self.detector.model.names[result.label]
 
             # TODO:check timestamp exists
-            r = {"timestamp": metadata["timestamp"],
+            r = {"timestamp": metadata["timestamp"], "recv_timestamp": metadata["recv_timestamp"],
                  "detections": detections}
 
             # use the flask app to return the results

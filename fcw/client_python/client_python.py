@@ -3,12 +3,14 @@ from __future__ import annotations
 import logging
 import os
 import signal
+import time
 import traceback
 from pathlib import Path
 
 import cv2
 
 from client_common import CollisionWarningClient
+from client_common import StreamType
 from era_5g_client.exceptions import FailedToConnect
 
 stopped = False
@@ -59,14 +61,26 @@ def main() -> None:
 
         # gstreamer True or False
         collision_warning_client = CollisionWarningClient(
-            config=config, camera_config=camera_config, fps=fps, gstreamer=True
+            config=config, camera_config=camera_config, fps=fps, stream_type=StreamType.WEBSOCKETS
         )
 
+        print(f"Frame count: {cap.get(cv2.CAP_PROP_FRAME_COUNT)}")
+
+        start_time = time.time_ns()
         while not stopped:
+            time0 = time.time_ns()
             ret, frame = cap.read()
             if not ret:
                 break
             collision_warning_client.send_image(frame)
+            time1 = time.time_ns()
+            time_elapsed_s = (time1 - time0) * 1.0e-9
+            print(f"send_image time: {time_elapsed_s:.3f}")
+            #if time_elapsed_s < (1/fps/2):
+            #    print(f"time.sleep: {(1/fps)-time_elapsed_s:.3f}")
+            #    time.sleep((1/fps)-time_elapsed_s)
+        end_time = time.time_ns()
+        print(f"Total streaming time: {(end_time - start_time) * 1.0e-9:.3f}s")
         cap.release()
 
     except FailedToConnect as ex:
