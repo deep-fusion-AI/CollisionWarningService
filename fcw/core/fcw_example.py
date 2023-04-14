@@ -4,15 +4,17 @@ Early Collision Warning system
 
 import logging
 from argparse import ArgumentParser, FileType
+import statistics
 
 import cv2
 import yaml
+import time
 
-from collision import get_reference_points, ForwardCollisionGuard
-from detection import detections_to_numpy
-from sort import Sort
-from vizualization import *
-from yolo_detector import YOLODetector
+from fcw.core.collision import get_reference_points, ForwardCollisionGuard
+from fcw.core.detection import detections_to_numpy
+from fcw.core.sort import Sort
+from fcw.core.vizualization import *
+from fcw.core.yolo_detector import YOLODetector
 
 
 # os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
@@ -30,7 +32,7 @@ def parse_arguments():
     return parser.parse_args()
 
 
-if __name__ == "__main__":
+def main(args=None):
     args = parse_arguments()
 
     logging.basicConfig(level=logging.INFO)
@@ -41,7 +43,9 @@ if __name__ == "__main__":
 
     # Open video
     logging.info("Opening video {vid}".format(vid=args.source_video))
-    video = cv2.VideoCapture(args.source_video, cv2.CAP_FFMPEG)
+    video = cv2.VideoCapture(args.source_video)
+    if not video.isOpened():
+        raise Exception("Cannot open video file")
     fps = video.get(cv2.CAP_PROP_FPS)
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
@@ -74,7 +78,10 @@ if __name__ == "__main__":
         output = cv2.VideoWriter(args.output, cv2.VideoWriter_fourcc(*"MP4V"), fps, camera.image_size)
 
     if args.viz:
-        cv2.namedWindow("FCW")
+        try:
+            cv2.namedWindow("FCW")
+        except Exception as ex:
+            logging.debug(ex)
 
     if render_output:
         # Prepare static stuff for vizualization
@@ -85,6 +92,8 @@ if __name__ == "__main__":
         horizon = draw_horizon(camera.rectified_size, camera, width=1, fill=(255, 255, 0, 64))
         marker, marker_anchor = vehicle_marker_image(scale=3)
 
+    delays = []
+
     # FCW Loop
     while True:
         ret, img = video.read()
@@ -92,6 +101,9 @@ if __name__ == "__main__":
             logging.info("Video ended")
             break
         img_undistorted = camera.rectify_image(img)
+
+        start_time = time.time_ns()
+
         # Detect object in image
         detections = detector.detect(img_undistorted)
         # Get bounding boxes as numpy array
@@ -109,6 +121,10 @@ if __name__ == "__main__":
         guard.update(ref_pt)
         # Get list of current offenses
         dangerous_objects = guard.dangerous_objects()
+
+        end_time = time.time_ns()
+        logging.info(f"Delay: {(end_time - start_time) * 1.0e-9:.3f}s")
+        delays.append((end_time - start_time))
 
         if render_output:
             # Vizualization
@@ -140,9 +156,12 @@ if __name__ == "__main__":
             cv_image = np.array(base.convert("RGB"))[..., ::-1]
 
         if args.viz:
-            # Display the image
-            cv2.imshow("FCW", cv_image)
-            cv2.waitKey(1)
+            try:
+                # Display the image
+                cv2.imshow("FCW", cv_image)
+                cv2.waitKey(1)
+            except Exception as ex:
+                logging.debug(ex)
 
         if args.output is not None:
             output.write(cv_image)
@@ -150,4 +169,14 @@ if __name__ == "__main__":
     if args.output is not None:
         output.release()
 
-    cv2.destroyAllWindows()
+    logging.info(f"-----")
+    logging.info(f"Delay median: {statistics.median(delays) * 1.0e-9:.3f}s")
+
+    try:
+        cv2.destroyAllWindows()
+    except Exception as ex:
+        logging.debug(ex)
+
+
+if __name__ == "__main__":
+    main()

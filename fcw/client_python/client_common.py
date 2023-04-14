@@ -8,6 +8,7 @@ from queue import Queue
 from threading import Event, Thread
 from typing import Any, Dict, Callable, Optional
 from enum import Enum
+import statistics
 
 import cv2
 import numpy as np
@@ -27,6 +28,7 @@ DEBUG_PRINT_DELAY = True  # prints the delay between capturing image and receivi
 
 # ip address or hostname of the computer, where the netapp is deployed
 NETAPP_ADDRESS = os.getenv("NETAPP_ADDRESS", "127.0.0.1")
+
 # port of the netapp's server
 NETAPP_PORT = os.getenv("NETAPP_PORT", 5896)
 
@@ -35,9 +37,14 @@ class ResultsViewer(Thread):
     def __init__(self, **kw) -> None:
         super().__init__(**kw)
         self.stop_event = Event()
+        self.delays = []
+        self.delays_recv = []
 
     def stop(self) -> None:
         self.stop_event.set()
+        logging.info(f"-----")
+        logging.info(f"Delay median: {statistics.median(self.delays) * 1.0e-9:.3f}s")
+        logging.info(f"Delay recv median: {statistics.median(self.delays_recv) * 1.0e-9:.3f}s")
 
     def run(self) -> None:
         logging.info("Thread %s: starting", self.name)
@@ -52,15 +59,19 @@ class ResultsViewer(Thread):
                     timestamp = timestamps.pop(timestamp_str)
                 if DEBUG_PRINT_DELAY:
                     time_now = results["results_timestamp"]
-                    print(f"Delay: {(time_now - timestamp) * 1.0e-9:.3f}s ")
-                    print(f"Delay recv: {(time_now - recv_timestamp) * 1.0e-9:.3f}s ")
+                    logging.info(f"Recv frame id: {timestamp_str}")
+                    logging.info(f"Delay: {(time_now - timestamp) * 1.0e-9:.3f}s ")
+                    logging.info(f"Delay recv: {(time_now - recv_timestamp) * 1.0e-9:.3f}s ")
+                    self.delays.append((time_now - timestamp))
+                    self.delays_recv.append((time_now - recv_timestamp))
+
                 try:
                     frame = image_storage.pop(timestamp_str)
                     detections = results["detections"]
                     for d in detections:
                         score = float(d["score"])
                         if DEBUG_PRINT_SCORE and score > 0:
-                            print(f"Score: {score}")
+                            logging.info(f"Score: {score}")
                         # cls_name = d["class_name"]
                         # Draw detection into frame.
                         x1, y1, x2, y2 = [int(coord) for coord in d["bbox"]]
@@ -85,10 +96,10 @@ class ResultsViewer(Thread):
                         cv2.imshow("Results", frame)
                         cv2.waitKey(1)
                     except Exception as ex:
-                        print(ex)
+                        logging.debug(ex)
                     results_storage.task_done()
                 except KeyError as ex:
-                    print(f"image_storage KeyError {ex}")
+                    logging.error(f"image_storage KeyError {ex}")
 
 
 def get_results(results: Dict[str, Any]) -> None:
@@ -167,16 +178,17 @@ class CollisionWarningClient:
             )
 
     def send_image(self, frame: np.ndarray, timestamp: Optional[str] = None):
+        # TODO: can overflow?
+        self.frame_id += 1
+        logging.info(f"Sent frame id: {self.frame_id}")
         time0 = time.time_ns()
         frame_undistorted = self.camera.rectify_image(frame)
         time1 = time.time_ns()
         time_elapsed_s = (time1 - time0) * 1.0e-9
-        print(f"rectify_image time: {time_elapsed_s:.3f}")
+        logging.info(f"rectify_image time: {time_elapsed_s:.3f}")
         if not timestamp:
             timestamp = time.time_ns()
         timestamp_str = str(timestamp)
-        # TODO: can overflow?
-        self.frame_id += 1
         # print(f"{self.frame_id} {timestamp}")
         # TODO: timestamp with gstreamer
         if self.stream_type is StreamType.GSTREAMER:

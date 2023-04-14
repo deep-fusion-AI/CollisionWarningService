@@ -1,0 +1,6 @@
+era_5g_interface
+era_5g_object_detection_common
+era_5g_object_detection_standalone
+python-socketio
+Flask-SocketIO
+Flask-Session

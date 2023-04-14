@@ -7,8 +7,31 @@ readme = "README.md"
 packages = [{include = "fcw"}]
 
 [tool.poetry.dependencies]
-python = "^3.8"
+python = ">=3.8,<3.11"
+pyyaml = "^6.0"
+opencv-python = "4.6.0.66"
+era-5g-client = "^0.0.0"
+filterpy = "^1.4.5"
+shapely = "^2.0.1"
+torch = "^2.0.0"
+more-itertools = "^9.1.0"
+pandas = "^2.0.0"
+requests = "^2.28.2"
+psutil = "^5.9.4"
+torchvision = "^0.15.1"
+tqdm = "^4.65.0"
+seaborn = "^0.12.2"
+era_5g_interface = "^0.0.0"
+era_5g_object_detection_common = "^0.0.1"
+era_5g_object_detection_standalone = "^0.0.1"
+python-socketio = "^5.8.0"
+flask-socketio = "^5.3.3"
+flask-session = "^0.4.0"
 
+[tool.poetry.scripts]
+fcw_service = "fcw.service.interface:main"
+fcw_client_python = "fcw.client_python.client_python:main"
+fcw_example = "fcw.core.fcw_example:main"
 
 [build-system]
 requires = ["poetry-core"]

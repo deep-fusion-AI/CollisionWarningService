@@ -1,0 +1,3 @@
+opencv-python~=4.6.0.37  # for usage with GStreamer, one has to compile OpenCV with its support turned on
+PyYAML
+era_5g_client

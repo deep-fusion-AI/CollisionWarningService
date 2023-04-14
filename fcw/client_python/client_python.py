@@ -5,12 +5,13 @@ import os
 import signal
 import time
 import traceback
+from argparse import FileType, ArgumentParser
 from pathlib import Path
 
 import cv2
 
-from client_common import CollisionWarningClient
-from client_common import StreamType
+from fcw.client_python.client_common import CollisionWarningClient
+from fcw.client_python.client_common import StreamType
 from era_5g_client.exceptions import FailedToConnect
 
 stopped = False
@@ -18,18 +19,25 @@ stopped = False
 # Video from source flag
 FROM_SOURCE = False
 # test video file
-TEST_VIDEO_FILE = os.getenv("TEST_VIDEO_FILE", "../../videos/video3.mp4")
+TEST_VIDEO_FILE = str("../../videos/video3.mp4")
 
 # Configuration of the algorithm
-config = Path("../../config/config.yaml")
+CONFIG_FILE = Path("../../config/config.yaml")
 # Camera settings - specific for the particular input
-camera_config = Path("../../videos/video3.yaml")
+CAMERA_CONFIG_FILE = Path("../../videos/video3.yaml")
 
 
 def main() -> None:
     """Creates the client class and starts the data transfer."""
 
     logging.getLogger().setLevel(logging.INFO)
+
+    parser = ArgumentParser()
+    parser.add_argument("-s", "--stream_type", type=StreamType, help="StreamType: GSTREAMER = 1, WEBSOCKETS = 2, HTTP = 3", default=StreamType.GSTREAMER)
+    parser.add_argument("-c", "--config", type=Path, help="Collision warning config", default=CONFIG_FILE)
+    parser.add_argument("--camera", type=Path, help="Camera settings", default=CAMERA_CONFIG_FILE)
+    parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs='?', default=TEST_VIDEO_FILE)
+    args = parser.parse_args()
 
     collision_warning_client = None
     global stopped
@@ -53,15 +61,18 @@ def main() -> None:
                 raise Exception("Cannot open camera")
         else:
             # or from video file
-            logging.info("Opening video file {file}".format(file=TEST_VIDEO_FILE))
-            cap = cv2.VideoCapture(TEST_VIDEO_FILE)
+            logging.info("Opening video file {file}".format(file=args.source_video))
+            cap = cv2.VideoCapture(args.source_video)
             if not cap.isOpened():
                 raise Exception("Cannot open video file")
         fps = cap.get(cv2.CAP_PROP_FPS)
+        width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+        height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+        logging.info("Video {W}x{H}, {fps} FPS".format(W=width, H=height, fps=fps))
 
         # gstreamer True or False
         collision_warning_client = CollisionWarningClient(
-            config=config, camera_config=camera_config, fps=fps, stream_type=StreamType.WEBSOCKETS
+            config=args.config, camera_config=args.camera, fps=fps, stream_type=args.stream_type
         )
 
         print(f"Frame count: {cap.get(cv2.CAP_PROP_FRAME_COUNT)}")
@@ -75,12 +86,12 @@ def main() -> None:
             collision_warning_client.send_image(frame)
             time1 = time.time_ns()
             time_elapsed_s = (time1 - time0) * 1.0e-9
-            print(f"send_image time: {time_elapsed_s:.3f}")
+            logging.info(f"send_image time: {time_elapsed_s:.3f}")
             #if time_elapsed_s < (1/fps/2):
             #    print(f"time.sleep: {(1/fps)-time_elapsed_s:.3f}")
             #    time.sleep((1/fps)-time_elapsed_s)
         end_time = time.time_ns()
-        print(f"Total streaming time: {(end_time - start_time) * 1.0e-9:.3f}s")
+        logging.info(f"Total streaming time: {(end_time - start_time) * 1.0e-9:.3f}s")
         cap.release()
 
     except FailedToConnect as ex:

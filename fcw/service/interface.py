@@ -15,7 +15,7 @@ import numpy as np
 from flask import Flask, Response, request, session
 from flask_session import Session
 
-from collision_worker import CollisionWorker
+from fcw.service.collision_worker import CollisionWorker
 from era_5g_interface.task_handler import TaskHandler
 from era_5g_interface.task_handler_gstreamer_internal_q import \
     TaskHandlerGstreamerInternalQ, TaskHandlerGstreamer

@@ -6,14 +6,22 @@ from typing import Iterable, List
 import numpy as np
 from PIL import Image, ImageDraw, ImageFont
 from shapely.geometry import LineString, Polygon
+import os.path
+from os import path
 
-import sort
-from collision import PointWorldObject, ObjectStatus
-from geometry import Camera
+from fcw.core import sort
+from fcw.core.collision import PointWorldObject, ObjectStatus
+from fcw.core.geometry import Camera
 
 # Font for OSD
-_font = ImageFont.truetype("../../data/UbuntuMono-R.ttf", 14, encoding="unic")
-
+if path.exists("../../data/UbuntuMono-R.ttf"):
+    _font = ImageFont.truetype("../../data/UbuntuMono-R.ttf", 14, encoding="unic")
+elif path.exists("data/UbuntuMono-R.ttf"):
+    _font = ImageFont.truetype("data/UbuntuMono-R.ttf", 14, encoding="unic")
+elif path.exists("/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf"):
+    _font = ImageFont.truetype("/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf", 14, encoding="unic")
+else:
+    _font = None
 
 # def segmentize(p: LineString, max_dist=10):
 #     pts = []
