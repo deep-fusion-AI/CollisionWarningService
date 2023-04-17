@@ -14,17 +14,21 @@ from fcw.client_python.client_common import CollisionWarningClient
 from fcw.client_python.client_common import StreamType
 from era_5g_client.exceptions import FailedToConnect
 
+from fcw.core.rate_timer import RateTimer
+
 stopped = False
 
 # Video from source flag
 FROM_SOURCE = False
 # test video file
-TEST_VIDEO_FILE = str("../../videos/video3.mp4")
+#TEST_VIDEO_FILE = str("../../videos/video3.mp4")
+TEST_VIDEO_FILE = str("../../videos/2023-03-20.mp4")
 
 # Configuration of the algorithm
 CONFIG_FILE = Path("../../config/config.yaml")
 # Camera settings - specific for the particular input
-CAMERA_CONFIG_FILE = Path("../../videos/video3.yaml")
+#CAMERA_CONFIG_FILE = Path("../../videos/video3.yaml")
+CAMERA_CONFIG_FILE = Path("../../videos/bringauto.yaml")
 
 
 def main() -> None:
@@ -33,9 +37,15 @@ def main() -> None:
     logging.getLogger().setLevel(logging.INFO)
 
     parser = ArgumentParser()
-    parser.add_argument("-s", "--stream_type", type=StreamType, help="StreamType: GSTREAMER = 1, WEBSOCKETS = 2, HTTP = 3", default=StreamType.GSTREAMER)
+    parser.add_argument(
+        "-s", "--stream_type", type=StreamType, help="StreamType: GSTREAMER = 1, WEBSOCKETS = 2, HTTP = 3",
+        default=StreamType.GSTREAMER
+    )
     parser.add_argument("-c", "--config", type=Path, help="Collision warning config", default=CONFIG_FILE)
     parser.add_argument("--camera", type=Path, help="Camera settings", default=CAMERA_CONFIG_FILE)
+    parser.add_argument("-o", "--out_csv_dir", type=str, help="Output CSV dir", default=".")
+    parser.add_argument("-p", "--out_prefix", type=str, help="Prefix of output csv file with measurements", default=None)
+    parser.add_argument("-t", "--play_time", type=str, help="Video play time", default=10)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs='?', default=TEST_VIDEO_FILE)
     args = parser.parse_args()
 
@@ -72,13 +82,16 @@ def main() -> None:
 
         # gstreamer True or False
         collision_warning_client = CollisionWarningClient(
-            config=args.config, camera_config=args.camera, fps=fps, stream_type=args.stream_type
+            config=args.config, camera_config=args.camera, fps=fps, stream_type=args.stream_type,
+            out_csv_dir=args.out_csv_dir, out_prefix=args.out_prefix
         )
 
         print(f"Frame count: {cap.get(cv2.CAP_PROP_FRAME_COUNT)}")
 
+        rate_timer = RateTimer(rate=fps, iteration_miss_warning=True)
+
         start_time = time.time_ns()
-        while not stopped:
+        while time.time_ns() - start_time < args.play_time * 1.0e+9 and not stopped:
             time0 = time.time_ns()
             ret, frame = cap.read()
             if not ret:
@@ -87,9 +100,10 @@ def main() -> None:
             time1 = time.time_ns()
             time_elapsed_s = (time1 - time0) * 1.0e-9
             logging.info(f"send_image time: {time_elapsed_s:.3f}")
-            #if time_elapsed_s < (1/fps/2):
+            # if time_elapsed_s < (1/fps/2):
             #    print(f"time.sleep: {(1/fps)-time_elapsed_s:.3f}")
             #    time.sleep((1/fps)-time_elapsed_s)
+            rate_timer.sleep()  # sleep until next frame should be sent (with given fps)
         end_time = time.time_ns()
         logging.info(f"Total streaming time: {(end_time - start_time) * 1.0e-9:.3f}s")
         cap.release()

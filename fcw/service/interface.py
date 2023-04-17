@@ -154,8 +154,11 @@ def image_callback_http():
 
         # store the image to the appropriate task
         task.store_image(
-            {"sid": sid, "websocket_id": task.websocket_id, "timestamp": timestamps[index],
-             "recv_timestamp": recv_timestamp}, img
+            {"sid": sid,
+             "websocket_id": task.websocket_id,
+             "timestamp": timestamps[index],
+             "recv_timestamp": recv_timestamp},
+            img
         )
         index += 1
     return Response(status=204)

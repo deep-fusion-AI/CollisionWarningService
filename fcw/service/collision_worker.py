@@ -1,5 +1,5 @@
 from queue import Queue
-
+import time
 import flask_socketio
 
 from era_5g_object_detection_common.image_detector import ImageDetector
@@ -78,7 +78,9 @@ class CollisionWorker(Worker, ImageDetector):
                 # det["class_name"] = self.detector.model.names[result.label]
 
             # TODO:check timestamp exists
-            r = {"timestamp": metadata["timestamp"], "recv_timestamp": metadata["recv_timestamp"],
+            r = {"timestamp": metadata["timestamp"],
+                 "recv_timestamp": metadata["recv_timestamp"],
+                 "send_timestamp": time.time_ns(),
                  "detections": detections}
 
             # use the flask app to return the results

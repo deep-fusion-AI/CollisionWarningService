@@ -9,7 +9,7 @@ packages = [{include = "fcw"}]
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
 pyyaml = "^6.0"
-opencv-python = "4.6.0.66"
+opencv-python = { file = "/home/robot/opencv-python/opencv_python-4.6.0.66-cp310-cp310-linux_x86_64.whl" }
 era-5g-client = "^0.0.0"
 filterpy = "^1.4.5"
 shapely = "^2.0.1"

@@ -5,10 +5,11 @@ Early Collision Warning system
 import logging
 from argparse import ArgumentParser, FileType
 import statistics
-
+from datetime import datetime
 import cv2
 import yaml
 import time
+import csv
 
 from fcw.core.collision import get_reference_points, ForwardCollisionGuard
 from fcw.core.detection import detections_to_numpy
@@ -16,6 +17,7 @@ from fcw.core.sort import Sort
 from fcw.core.vizualization import *
 from fcw.core.yolo_detector import YOLODetector
 
+from fcw.core.rate_timer import RateTimer
 
 # os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 
@@ -27,6 +29,9 @@ def parse_arguments():
     parser.add_argument("--camera", type=FileType("r"), required=True, help="Camera settings")
     parser.add_argument("-o", "--output", type=str, help="Output video")
     parser.add_argument("--viz", action="store_true")
+    parser.add_argument("--out_csv_dir", type=str, help="Output CSV dir", default=".")
+    parser.add_argument("-p", "--out_prefix", type=str, help="Prefix of output csv file with measurements", default="fcw_example_test_")
+    parser.add_argument("-t", "--play_time", type=str, help="Video play time", default=10)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)")
 
     return parser.parse_args()
@@ -93,16 +98,25 @@ def main(args=None):
         marker, marker_anchor = vehicle_marker_image(scale=3)
 
     delays = []
+    timestamps = [
+        ["start_timestamp_ns",
+         "recv_timestamp_ns",
+         "send_timestamp_ns",
+         "end_timestamp_ns"]
+    ]
+
+    rate_timer = RateTimer(rate=fps, iteration_miss_warning=True)
 
     # FCW Loop
-    while True:
+    start_time = time.time_ns()
+    while time.time_ns() - start_time < args.play_time * 1.0e+9:
         ret, img = video.read()
         if not ret or img is None:
             logging.info("Video ended")
             break
         img_undistorted = camera.rectify_image(img)
 
-        start_time = time.time_ns()
+        time0 = time.time_ns()
 
         # Detect object in image
         detections = detector.detect(img_undistorted)
@@ -122,9 +136,17 @@ def main(args=None):
         # Get list of current offenses
         dangerous_objects = guard.dangerous_objects()
 
-        end_time = time.time_ns()
-        logging.info(f"Delay: {(end_time - start_time) * 1.0e-9:.3f}s")
-        delays.append((end_time - start_time))
+        time1 = time.time_ns()
+        logging.info(f"Delay: {(time1 - time0) * 1.0e-9:.3f}s")
+        delays.append((time1 - time0))
+        timestamps.append(
+            [
+                time0,
+                time0,
+                time1,
+                time1
+            ]
+        )
 
         if render_output:
             # Vizualization
@@ -166,11 +188,22 @@ def main(args=None):
         if args.output is not None:
             output.write(cv_image)
 
+        rate_timer.sleep()  # sleep until next frame should be sent (with given fps)
+
     if args.output is not None:
         output.release()
 
     logging.info(f"-----")
+    end_time = time.time_ns()
+    logging.info(f"Total streaming time: {(end_time - start_time) * 1.0e-9:.3f}s")
     logging.info(f"Delay median: {statistics.median(delays) * 1.0e-9:.3f}s")
+
+    if args.out_csv_dir is not None:
+        out_csv_filename = f'{args.out_prefix}{datetime.now().strftime("%Y-%d-%m_%H-%M-%S")}'
+        out_csv_filepath = os.path.join(args.out_csv_dir, out_csv_filename + ".csv")
+        with open(out_csv_filepath, "w", newline='') as csv_file:
+            csv_writer = csv.writer(csv_file)
+            csv_writer.writerows(timestamps)
 
     try:
         cv2.destroyAllWindows()

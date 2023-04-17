@@ -9,6 +9,8 @@ from threading import Event, Thread
 from typing import Any, Dict, Callable, Optional
 from enum import Enum
 import statistics
+from datetime import datetime
+import csv
 
 import cv2
 import numpy as np
@@ -34,17 +36,33 @@ NETAPP_PORT = os.getenv("NETAPP_PORT", 5896)
 
 
 class ResultsViewer(Thread):
-    def __init__(self, **kw) -> None:
+    def __init__(self, out_csv_dir=None, out_prefix=None, **kw) -> None:
         super().__init__(**kw)
         self.stop_event = Event()
         self.delays = []
         self.delays_recv = []
+        self.delays_send = []
+        self.timestamps = [
+            ["start_timestamp_ns",
+             "recv_timestamp_ns",
+             "send_timestamp_ns",
+             "end_timestamp_ns"]
+        ]
+        self.out_csv_dir = out_csv_dir
+        self.out_prefix = out_prefix
 
     def stop(self) -> None:
         self.stop_event.set()
         logging.info(f"-----")
         logging.info(f"Delay median: {statistics.median(self.delays) * 1.0e-9:.3f}s")
-        logging.info(f"Delay recv median: {statistics.median(self.delays_recv) * 1.0e-9:.3f}s")
+        logging.info(f"Delay service recv median: {statistics.median(self.delays_recv) * 1.0e-9:.3f}s")
+        logging.info(f"Delay service send median: {statistics.median(self.delays_send) * 1.0e-9:.3f}s")
+        if self.out_csv_dir is not None:
+            out_csv_filename = f'{self.out_prefix}{datetime.now().strftime("%Y-%d-%m_%H-%M-%S")}'
+            out_csv_filepath = os.path.join(self.out_csv_dir, out_csv_filename + ".csv")
+            with open(out_csv_filepath, "w", newline='') as csv_file:
+                csv_writer = csv.writer(csv_file)
+                csv_writer.writerows(self.timestamps)
 
     def run(self) -> None:
         logging.info("Thread %s: starting", self.name)
@@ -53,17 +71,30 @@ class ResultsViewer(Thread):
                 results = results_storage.get(timeout=1)
                 timestamp_str = results["timestamp"]
                 recv_timestamp_str = results["recv_timestamp"]
+                send_timestamp_str = results["send_timestamp"]
                 timestamp = int(timestamp_str)
                 recv_timestamp = int(recv_timestamp_str)
+                send_timestamp = int(send_timestamp_str)
                 if timestamp_str in timestamps:
                     timestamp = timestamps.pop(timestamp_str)
                 if DEBUG_PRINT_DELAY:
                     time_now = results["results_timestamp"]
                     logging.info(f"Recv frame id: {timestamp_str}")
                     logging.info(f"Delay: {(time_now - timestamp) * 1.0e-9:.3f}s ")
-                    logging.info(f"Delay recv: {(time_now - recv_timestamp) * 1.0e-9:.3f}s ")
+                    logging.info(f"Delay service recv: {(recv_timestamp - timestamp) * 1.0e-9:.3f}s ")
+                    logging.info(f"Delay service send: {(send_timestamp - timestamp) * 1.0e-9:.3f}s ")
                     self.delays.append((time_now - timestamp))
-                    self.delays_recv.append((time_now - recv_timestamp))
+                    self.delays_recv.append((recv_timestamp - timestamp))
+                    self.delays_send.append((send_timestamp - timestamp))
+
+                self.timestamps.append(
+                    [
+                        timestamp,
+                        recv_timestamp,
+                        send_timestamp,
+                        results["results_timestamp"]
+                    ]
+                )
 
                 try:
                     frame = image_storage.pop(timestamp_str)
@@ -129,6 +160,8 @@ class CollisionWarningClient:
         fps: float = 30,
         results_callback: Optional[Callable] = None,
         stream_type: Optional[StreamType] = StreamType.HTTP,
+        out_csv_dir=None,
+        out_prefix="fcw_test_",
     ):
         logging.info("Loading configuration file {cfg}".format(cfg=config))
         self.config_dict = yaml.safe_load(config.open())
@@ -141,7 +174,9 @@ class CollisionWarningClient:
         self.results_callback = results_callback
         if self.results_callback is None:
             self.results_callback = get_results
-            self.results_viewer = ResultsViewer(name="results_viewer", daemon=True)
+            self.results_viewer = ResultsViewer(
+                name="results_viewer", out_csv_dir=out_csv_dir, out_prefix=out_prefix, daemon=True
+            )
             self.results_viewer.start()
         self.stream_type = stream_type
         self.frame_id = 0
