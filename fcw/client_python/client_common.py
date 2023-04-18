@@ -34,9 +34,11 @@ NETAPP_ADDRESS = os.getenv("NETAPP_ADDRESS", "127.0.0.1")
 # port of the netapp's server
 NETAPP_PORT = os.getenv("NETAPP_PORT", 5896)
 
+start_timestamp = datetime.now().strftime("%Y-%d-%m_%H-%M-%S")
+
 
 class ResultsViewer(Thread):
-    def __init__(self, out_csv_dir=None, out_prefix=None, **kw) -> None:
+    def __init__(self, out_csv_dir: str = None, out_prefix: str = None, **kw) -> None:
         super().__init__(**kw)
         self.stop_event = Event()
         self.delays = []
@@ -54,15 +56,18 @@ class ResultsViewer(Thread):
     def stop(self) -> None:
         self.stop_event.set()
         logging.info(f"-----")
-        logging.info(f"Delay median: {statistics.median(self.delays) * 1.0e-9:.3f}s")
-        logging.info(f"Delay service recv median: {statistics.median(self.delays_recv) * 1.0e-9:.3f}s")
-        logging.info(f"Delay service send median: {statistics.median(self.delays_send) * 1.0e-9:.3f}s")
-        if self.out_csv_dir is not None:
-            out_csv_filename = f'{self.out_prefix}{datetime.now().strftime("%Y-%d-%m_%H-%M-%S")}'
-            out_csv_filepath = os.path.join(self.out_csv_dir, out_csv_filename + ".csv")
-            with open(out_csv_filepath, "w", newline='') as csv_file:
-                csv_writer = csv.writer(csv_file)
-                csv_writer.writerows(self.timestamps)
+        if len(self.delays) < 1 or len(self.delays_recv) < 1 or len(self.delays_send) < 1:
+            logging.warning(f"No results data received")
+        else:
+            logging.info(f"Delay median: {statistics.median(self.delays) * 1.0e-9:.3f}s")
+            logging.info(f"Delay service recv median: {statistics.median(self.delays_recv) * 1.0e-9:.3f}s")
+            logging.info(f"Delay service send median: {statistics.median(self.delays_send) * 1.0e-9:.3f}s")
+            if self.out_csv_dir is not None:
+                out_csv_filename = f'{self.out_prefix}{start_timestamp}'
+                out_csv_filepath = os.path.join(self.out_csv_dir, out_csv_filename + ".csv")
+                with open(out_csv_filepath, "w", newline='') as csv_file:
+                    csv_writer = csv.writer(csv_file)
+                    csv_writer.writerows(self.timestamps)
 
     def run(self) -> None:
         logging.info("Thread %s: starting", self.name)
@@ -146,9 +151,9 @@ def get_results(results: Dict[str, Any]) -> None:
 
 
 class StreamType(Enum):
-    GSTREAMER = 1,
-    WEBSOCKETS = 2,
-    HTTP = 3,
+    GSTREAMER = 1
+    WEBSOCKETS = 2
+    HTTP = 3
 
 
 class CollisionWarningClient:
@@ -160,8 +165,10 @@ class CollisionWarningClient:
         fps: float = 30,
         results_callback: Optional[Callable] = None,
         stream_type: Optional[StreamType] = StreamType.HTTP,
-        out_csv_dir=None,
-        out_prefix="fcw_test_",
+        out_csv_dir: Optional[str] = None,
+        out_prefix: Optional[str] = "fcw_test_",
+        netapp_address: Optional[str] = NETAPP_ADDRESS,
+        netapp_port: Optional[int] = NETAPP_PORT
     ):
         logging.info("Loading configuration file {cfg}".format(cfg=config))
         self.config_dict = yaml.safe_load(config.open())
@@ -186,7 +193,7 @@ class CollisionWarningClient:
         if self.stream_type is StreamType.GSTREAMER:
             # register the client with the NetApp with gstreamer extension
             self.client.register(
-                NetAppLocation(NETAPP_ADDRESS, NETAPP_PORT),
+                NetAppLocation(netapp_address, netapp_port),
                 gstreamer=True,
                 args={"config": self.config_dict, "camera_config": self.camera_config_dict, "fps": self.fps}
             )
@@ -201,14 +208,14 @@ class CollisionWarningClient:
         elif self.stream_type is StreamType.WEBSOCKETS:
             # register the client with the NetApp  without gstreamer extension
             self.client.register(
-                NetAppLocation(NETAPP_ADDRESS, NETAPP_PORT),
+                NetAppLocation(netapp_address, netapp_port),
                 ws_data=True,
                 args={"config": self.config_dict, "camera_config": self.camera_config_dict, "fps": self.fps}
             )
         else:
             # register the client with the NetApp  without gstreamer extension
             self.client.register(
-                NetAppLocation(NETAPP_ADDRESS, NETAPP_PORT),
+                NetAppLocation(netapp_address, netapp_port),
                 args={"config": self.config_dict, "camera_config": self.camera_config_dict, "fps": self.fps}
             )
 
@@ -239,6 +246,9 @@ class CollisionWarningClient:
             self.client.send_image_http(frame_undistorted, timestamp_str, 5)
             if self.results_callback is get_results:
                 image_storage[timestamp_str] = frame_undistorted
+
+    def frame_id(self):
+        return self.frame_id
 
     def stop(self):
         if self.results_viewer is not None:

@@ -21,6 +21,8 @@ from fcw.core.rate_timer import RateTimer
 
 # os.environ["OPENCV_FFMPEG_CAPTURE_OPTIONS"] = "rtsp_transport;udp"
 
+start_timestamp = datetime.now().strftime("%Y-%d-%m_%H-%M-%S")
+
 
 def parse_arguments():
     parser = ArgumentParser()
@@ -31,7 +33,8 @@ def parse_arguments():
     parser.add_argument("--viz", action="store_true")
     parser.add_argument("--out_csv_dir", type=str, help="Output CSV dir", default=".")
     parser.add_argument("-p", "--out_prefix", type=str, help="Prefix of output csv file with measurements", default="fcw_example_test_")
-    parser.add_argument("-t", "--play_time", type=str, help="Video play time", default=10)
+    parser.add_argument("-t", "--play_time", type=int, help="Video play time", default=10)
+    parser.add_argument("--fps", type=int, help="Video FPS", default=None)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)")
 
     return parser.parse_args()
@@ -51,7 +54,10 @@ def main(args=None):
     video = cv2.VideoCapture(args.source_video)
     if not video.isOpened():
         raise Exception("Cannot open video file")
-    fps = video.get(cv2.CAP_PROP_FPS)
+    if not args.fps:
+        fps = video.get(cv2.CAP_PROP_FPS)
+    else:
+        fps = args.fps
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     shape = height, width
@@ -199,7 +205,7 @@ def main(args=None):
     logging.info(f"Delay median: {statistics.median(delays) * 1.0e-9:.3f}s")
 
     if args.out_csv_dir is not None:
-        out_csv_filename = f'{args.out_prefix}{datetime.now().strftime("%Y-%d-%m_%H-%M-%S")}'
+        out_csv_filename = f'{args.out_prefix}{start_timestamp}'
         out_csv_filepath = os.path.join(args.out_csv_dir, out_csv_filename + ".csv")
         with open(out_csv_filepath, "w", newline='') as csv_file:
             csv_writer = csv.writer(csv_file)

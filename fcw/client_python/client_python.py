@@ -22,7 +22,7 @@ stopped = False
 FROM_SOURCE = False
 # test video file
 #TEST_VIDEO_FILE = str("../../videos/video3.mp4")
-TEST_VIDEO_FILE = str("../../videos/2023-03-20.mp4")
+TEST_VIDEO_FILE = str("../../videos/bringauto_2023-03-20.mp4")
 
 # Configuration of the algorithm
 CONFIG_FILE = Path("../../config/config.yaml")
@@ -38,14 +38,15 @@ def main() -> None:
 
     parser = ArgumentParser()
     parser.add_argument(
-        "-s", "--stream_type", type=StreamType, help="StreamType: GSTREAMER = 1, WEBSOCKETS = 2, HTTP = 3",
+        "-s", "--stream_type", type=int, help="StreamType: 1 = GSTREAMER, 2 = WEBSOCKETS, 3 = HTTP",
         default=StreamType.GSTREAMER
     )
     parser.add_argument("-c", "--config", type=Path, help="Collision warning config", default=CONFIG_FILE)
     parser.add_argument("--camera", type=Path, help="Camera settings", default=CAMERA_CONFIG_FILE)
     parser.add_argument("-o", "--out_csv_dir", type=str, help="Output CSV dir", default=".")
     parser.add_argument("-p", "--out_prefix", type=str, help="Prefix of output csv file with measurements", default=None)
-    parser.add_argument("-t", "--play_time", type=str, help="Video play time", default=10)
+    parser.add_argument("-t", "--play_time", type=int, help="Video play time", default=10)
+    parser.add_argument("--fps", type=int, help="Video FPS", default=None)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs='?', default=TEST_VIDEO_FILE)
     args = parser.parse_args()
 
@@ -75,18 +76,23 @@ def main() -> None:
             cap = cv2.VideoCapture(args.source_video)
             if not cap.isOpened():
                 raise Exception("Cannot open video file")
-        fps = cap.get(cv2.CAP_PROP_FPS)
+        if not args.fps:
+            fps = cap.get(cv2.CAP_PROP_FPS)
+        else:
+            fps = args.fps
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
         logging.info("Video {W}x{H}, {fps} FPS".format(W=width, H=height, fps=fps))
 
+        logging.info(f"Stream type: {StreamType(args.stream_type)}")
+
         # gstreamer True or False
         collision_warning_client = CollisionWarningClient(
-            config=args.config, camera_config=args.camera, fps=fps, stream_type=args.stream_type,
+            config=args.config, camera_config=args.camera, fps=fps, stream_type=StreamType(args.stream_type),
             out_csv_dir=args.out_csv_dir, out_prefix=args.out_prefix
         )
 
-        print(f"Frame count: {cap.get(cv2.CAP_PROP_FRAME_COUNT)}")
+        logging.info(f"Frame count: {cap.get(cv2.CAP_PROP_FRAME_COUNT)}")
 
         rate_timer = RateTimer(rate=fps, iteration_miss_warning=True)
 
@@ -109,14 +115,15 @@ def main() -> None:
         cap.release()
 
     except FailedToConnect as ex:
-        print(f"Failed to connect to server ({ex})")
+        logging.error(f"Failed to connect to server ({ex})")
     except KeyboardInterrupt:
-        print("Terminating...")
+        logging.info("Terminating...")
     except Exception as ex:
         traceback.print_exc()
-        print(f"Failed to create client instance ({ex})")
+        logging.error(f"Failed to create client instance ({ex})")
     finally:
-        collision_warning_client.stop()
+        if collision_warning_client is not None:
+            collision_warning_client.stop()
 
 
 if __name__ == "__main__":

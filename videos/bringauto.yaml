@@ -1,0 +1,20 @@
+# Configuration of BringAuto delivery robot frontal camera
+
+# Image resolution
+image_size: [1280, 720]  # (w,h) in pixels
+rectified_size: [400, 232]
+
+# 3x3 Camera matrix
+K:
+  - [436.34,   0.00, 657.37]
+  - [  0.00, 436.96, 355.33]
+  - [  0.00,   0.00,   1.00]
+
+# Fisheye Distortion parameters
+D: [0.311, 0.063, -0.051, 0.000]
+
+# distance from ground: 830 mm
+location: [2, 0, 0.83]
+view_direction: x
+horizon_points:
+  - [645, 368]

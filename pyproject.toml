@@ -9,8 +9,7 @@ packages = [{include = "fcw"}]
 [tool.poetry.dependencies]
 python = ">=3.8,<3.11"
 pyyaml = "^6.0"
-opencv-python = { file = "/home/robot/opencv-python/opencv_python-4.6.0.66-cp310-cp310-linux_x86_64.whl" }
-era-5g-client = "^0.0.0"
+#opencv-python = { file = "/home/robot/opencv-python/opencv_python-4.6.0.66-cp310-cp310-linux_x86_64.whl" }
 filterpy = "^1.4.5"
 shapely = "^2.0.1"
 torch = "^2.0.0"
@@ -21,10 +20,11 @@ psutil = "^5.9.4"
 torchvision = "^0.15.1"
 tqdm = "^4.65.0"
 seaborn = "^0.12.2"
-era_5g_interface = "^0.0.0"
-era_5g_object_detection_common = "^0.0.1"
-era_5g_object_detection_standalone = "^0.0.1"
-python-socketio = "^5.8.0"
+#era-5g-interface = { path = "../era-5g-interface/" }
+#era-5g-client = { path = "../era-5g-client/" }
+era_5g_object_detection_common = { path = "../Reference-NetApp/src/python/era_5g_object_detection_common/" }
+era_5g_object_detection_standalone = { path = "../Reference-NetApp/src/python/era_5g_object_detection_standalone/" }
+python-socketio = "^5.7.2"
 flask-socketio = "^5.3.3"
 flask-session = "^0.4.0"
 
