@@ -45,7 +45,7 @@ def main() -> None:
     parser.add_argument("--camera", type=Path, help="Camera settings", default=CAMERA_CONFIG_FILE)
     parser.add_argument("-o", "--out_csv_dir", type=str, help="Output CSV dir", default=".")
     parser.add_argument("-p", "--out_prefix", type=str, help="Prefix of output csv file with measurements", default=None)
-    parser.add_argument("-t", "--play_time", type=int, help="Video play time", default=10)
+    parser.add_argument("-t", "--play_time", type=int, help="Video play time in seconds", default=10)
     parser.add_argument("--fps", type=int, help="Video FPS", default=None)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs='?', default=TEST_VIDEO_FILE)
     args = parser.parse_args()
@@ -58,7 +58,7 @@ def main() -> None:
         global stopped
         stopped = True
         collision_warning_client.stop()
-        print(f"Terminating ({signal.Signals(sig).name})...")
+        logging.info(f"Terminating ({signal.Signals(sig).name})...")
 
     signal.signal(signal.SIGTERM, signal_handler)
     signal.signal(signal.SIGINT, signal_handler)
@@ -100,11 +100,13 @@ def main() -> None:
         while time.time_ns() - start_time < args.play_time * 1.0e+9 and not stopped:
             time0 = time.time_ns()
             ret, frame = cap.read()
+            time1 = time.time_ns()
             if not ret:
                 break
             collision_warning_client.send_image(frame)
-            time1 = time.time_ns()
-            time_elapsed_s = (time1 - time0) * 1.0e-9
+            time2 = time.time_ns()
+            time_elapsed_s = (time2 - time0) * 1.0e-9
+            logging.info(f"read frame time: {(time1 - time0) * 1.0e-9:.3f}")
             logging.info(f"send_image time: {time_elapsed_s:.3f}")
             # if time_elapsed_s < (1/fps/2):
             #    print(f"time.sleep: {(1/fps)-time_elapsed_s:.3f}")

@@ -1,13 +1,14 @@
 FROM but5gera/netapp_base_gstreamer:0.1.1
 
-FROM nvidia/cuda:11.7.1-base-ubuntu20.04
+#FROM nvidia/cuda:11.7.1-base-ubuntu20.04
+FROM python:3.8-slim
 
 RUN apt-get update \
     && apt-get install -y python3 python-is-python3 python3-pip git
 
 RUN python3 -m pip install --upgrade pip
 
-RUN pip install torch===1.13.1+cu117 torchvision===0.14.1+cu117 torchaudio===0.13.1+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
+#RUN pip install torch===1.13.1+cu117 torchvision===0.14.1+cu117 torchaudio===0.13.1+cu117 --extra-index-url https://download.pytorch.org/whl/cu117
 
 RUN mkdir -p /root/opencv
 

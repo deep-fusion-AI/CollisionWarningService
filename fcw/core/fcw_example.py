@@ -33,7 +33,7 @@ def parse_arguments():
     parser.add_argument("--viz", action="store_true")
     parser.add_argument("--out_csv_dir", type=str, help="Output CSV dir", default=".")
     parser.add_argument("-p", "--out_prefix", type=str, help="Prefix of output csv file with measurements", default="fcw_example_test_")
-    parser.add_argument("-t", "--play_time", type=int, help="Video play time", default=10)
+    parser.add_argument("-t", "--play_time", type=int, help="Video play time in seconds", default=20)
     parser.add_argument("--fps", type=int, help="Video FPS", default=None)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)")
 
@@ -120,7 +120,12 @@ def main(args=None):
         if not ret or img is None:
             logging.info("Video ended")
             break
+
+        time0 = time.time_ns()
         img_undistorted = camera.rectify_image(img)
+        time1 = time.time_ns()
+        time_elapsed_s = (time1 - time0) * 1.0e-9
+        logging.info(f"rectify_image time: {time_elapsed_s:.3f}")
 
         time0 = time.time_ns()
 
@@ -205,7 +210,7 @@ def main(args=None):
     logging.info(f"Delay median: {statistics.median(delays) * 1.0e-9:.3f}s")
 
     if args.out_csv_dir is not None:
-        out_csv_filename = f'{args.out_prefix}{start_timestamp}'
+        out_csv_filename = f'{start_timestamp}_{args.out_prefix}'
         out_csv_filepath = os.path.join(args.out_csv_dir, out_csv_filename + ".csv")
         with open(out_csv_filepath, "w", newline='') as csv_file:
             csv_writer = csv.writer(csv_file)

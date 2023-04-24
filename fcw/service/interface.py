@@ -84,7 +84,7 @@ def register():
 
     # queue with received images
     # TODO: adjust the queue length
-    image_queue = Queue(30)
+    image_queue = Queue(1)
 
     # select the appropriate task handler, depends on whether the client wants to use
     # gstreamer to pass the images or not
@@ -249,7 +249,6 @@ def connect_results(auth):
     logging.info(f"Client connected: session id: {session.sid}, websocket id: {sid}")
     tasks[session.sid].worker.start()
     tasks[session.sid].task.websocket_id = sid
-    tasks[session.sid].task.start()
     t0 = time.time_ns()
     while True:
         if tasks[session.sid].worker.is_alive():
@@ -258,12 +257,14 @@ def connect_results(auth):
             logging.error(f"Timed out to start worker. Session id: {session.sid}, ws_sid: {request.sid}")
             raise ConnectionRefusedError('Timed out to start worker.')
     t0 = time.time_ns()
-    while True:
-        if tasks[session.sid].task.is_alive():
-            break
-        if time.time_ns() > t0 + 5 * 1.0e+9:
-            logging.error(f"Timed out to start task. Session id: {session.sid}, ws_sid: {request.sid}")
-            raise ConnectionRefusedError('Timed out to start task.')
+    if isinstance(tasks[session.sid].task, TaskHandlerGstreamer):
+        tasks[session.sid].task.start()
+        while True:
+            if tasks[session.sid].task.is_alive():
+                break
+            if time.time_ns() > t0 + 5 * 1.0e+9:
+                logging.error(f"Timed out to start task. Session id: {session.sid}, ws_sid: {request.sid}")
+                raise ConnectionRefusedError('Timed out to start task.')
     # TODO: Check task is running, Gstreamer capture can failed
     flask_socketio.send("You are connected", namespace='/results', to=sid)
 

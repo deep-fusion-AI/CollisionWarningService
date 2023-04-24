@@ -63,7 +63,7 @@ class ResultsViewer(Thread):
             logging.info(f"Delay service recv median: {statistics.median(self.delays_recv) * 1.0e-9:.3f}s")
             logging.info(f"Delay service send median: {statistics.median(self.delays_send) * 1.0e-9:.3f}s")
             if self.out_csv_dir is not None:
-                out_csv_filename = f'{self.out_prefix}{start_timestamp}'
+                out_csv_filename = f'{start_timestamp}_{self.out_prefix}'
                 out_csv_filepath = os.path.join(self.out_csv_dir, out_csv_filename + ".csv")
                 with open(out_csv_filepath, "w", newline='') as csv_file:
                     csv_writer = csv.writer(csv_file)
@@ -82,9 +82,9 @@ class ResultsViewer(Thread):
                 send_timestamp = int(send_timestamp_str)
                 if timestamp_str in timestamps:
                     timestamp = timestamps.pop(timestamp_str)
+                    logging.info(f"Recv frame id: {timestamp_str}")
                 if DEBUG_PRINT_DELAY:
                     time_now = results["results_timestamp"]
-                    logging.info(f"Recv frame id: {timestamp_str}")
                     logging.info(f"Delay: {(time_now - timestamp) * 1.0e-9:.3f}s ")
                     logging.info(f"Delay service recv: {(recv_timestamp - timestamp) * 1.0e-9:.3f}s ")
                     logging.info(f"Delay service send: {(send_timestamp - timestamp) * 1.0e-9:.3f}s ")
@@ -189,6 +189,7 @@ class CollisionWarningClient:
         self.frame_id = 0
 
         self.client = NetAppClientBase(self.results_callback)
+        logging.info(f"Register with netapp_address: {netapp_address}, netapp_port: {netapp_port}")
 
         if self.stream_type is StreamType.GSTREAMER:
             # register the client with the NetApp with gstreamer extension
@@ -212,17 +213,17 @@ class CollisionWarningClient:
                 ws_data=True,
                 args={"config": self.config_dict, "camera_config": self.camera_config_dict, "fps": self.fps}
             )
-        else:
+        elif self.stream_type is StreamType.HTTP:
             # register the client with the NetApp  without gstreamer extension
             self.client.register(
                 NetAppLocation(netapp_address, netapp_port),
                 args={"config": self.config_dict, "camera_config": self.camera_config_dict, "fps": self.fps}
             )
+        else:
+            raise Exception("Unknown stream type")
 
     def send_image(self, frame: np.ndarray, timestamp: Optional[str] = None):
-        # TODO: can overflow?
         self.frame_id += 1
-        logging.info(f"Sent frame id: {self.frame_id}")
         time0 = time.time_ns()
         frame_undistorted = self.camera.rectify_image(frame)
         time1 = time.time_ns()
@@ -231,21 +232,22 @@ class CollisionWarningClient:
         if not timestamp:
             timestamp = time.time_ns()
         timestamp_str = str(timestamp)
-        # print(f"{self.frame_id} {timestamp}")
-        # TODO: timestamp with gstreamer
         if self.stream_type is StreamType.GSTREAMER:
             self.data_sender_gstreamer.send_image(frame_undistorted)
             if self.results_callback is get_results:
                 image_storage[str(self.frame_id)] = frame_undistorted
                 timestamps[str(self.frame_id)] = timestamp
+                logging.info(f"Sent frame id: {self.frame_id}")
         elif self.stream_type is StreamType.WEBSOCKETS:
             self.client.send_image_ws(frame_undistorted, timestamp_str)
             if self.results_callback is get_results:
                 image_storage[timestamp_str] = frame_undistorted
-        else:
+        elif self.stream_type is StreamType.HTTP:
             self.client.send_image_http(frame_undistorted, timestamp_str, 5)
             if self.results_callback is get_results:
                 image_storage[timestamp_str] = frame_undistorted
+        else:
+            raise Exception("Unknown stream type")
 
     def frame_id(self):
         return self.frame_id

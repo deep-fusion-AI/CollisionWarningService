@@ -79,7 +79,7 @@ class Camera:
     def rectify_image(self, image):
         map1, map2 = self.maps
         img = cv2.GaussianBlur(image, (3, 3), 0.5)
-        return cv2.remap(img, map1, map2, cv2.INTER_LINEAR, borderMode=cv2.BORDER_CONSTANT)
+        return cv2.remap(img, map1, map2, cv2.INTER_NEAREST, borderMode=cv2.BORDER_CONSTANT)
 
     def rectify_points(self, x):
         y = undistortPoints(x.reshape(1, -1, 2), self.K, self.D, P=self.K_new)
