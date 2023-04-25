@@ -63,7 +63,7 @@ class ResultsViewer(Thread):
             logging.info(f"Delay service recv median: {statistics.median(self.delays_recv) * 1.0e-9:.3f}s")
             logging.info(f"Delay service send median: {statistics.median(self.delays_send) * 1.0e-9:.3f}s")
             if self.out_csv_dir is not None:
-                out_csv_filename = f'{start_timestamp}_{self.out_prefix}'
+                out_csv_filename = f'{self.out_prefix}'
                 out_csv_filepath = os.path.join(self.out_csv_dir, out_csv_filename + ".csv")
                 with open(out_csv_filepath, "w", newline='') as csv_file:
                     csv_writer = csv.writer(csv_file)

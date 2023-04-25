@@ -210,7 +210,7 @@ def main(args=None):
     logging.info(f"Delay median: {statistics.median(delays) * 1.0e-9:.3f}s")
 
     if args.out_csv_dir is not None:
-        out_csv_filename = f'{start_timestamp}_{args.out_prefix}'
+        out_csv_filename = f'{args.out_prefix}'
         out_csv_filepath = os.path.join(args.out_csv_dir, out_csv_filename + ".csv")
         with open(out_csv_filepath, "w", newline='') as csv_file:
             csv_writer = csv.writer(csv_file)
