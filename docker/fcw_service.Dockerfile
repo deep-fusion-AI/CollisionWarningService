@@ -1,8 +1,5 @@
-FROM but5gera/netapp_base_gstreamer:0.1.1
-
 FROM but5gera/netapp_object_detection_standalone_cpu:0.2.0
 
-#FROM nvidia/cuda:11.7.1-base-ubuntu20.04
 FROM python:3.8-slim
 
 RUN apt-get update \
@@ -14,22 +11,8 @@ RUN python3 -m pip install --upgrade pip
 
 RUN mkdir -p /root/opencv
 
-COPY --from=0 /root/opencv/*.whl /root/opencv/
-
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Prague
-
-RUN apt-get update \
-    && apt-get install -y \
-    libgstreamer1.0-0 \
-    gstreamer1.0-plugins-base \
-    gstreamer1.0-plugins-good \
-    gstreamer1.0-plugins-bad \
-    gstreamer1.0-plugins-ugly \
-    gstreamer1.0-libav \
-    gstreamer1.0-tools \
-    libgstreamer1.0-dev \
-    libgstreamer-plugins-base1.0-dev
 
 RUN cd /root/opencv \
     && pip3 install *.whl
@@ -43,13 +26,13 @@ RUN cd /root/era-5g-interface \
 
 ENTRYPOINT ["/root/fcw_service_start.sh"]
 
-COPY --from=1 root/era_5g_object_detection_common /root/era_5g_object_detection_common
+COPY --from=0 root/era_5g_object_detection_common /root/era_5g_object_detection_common
 
 RUN cd /root/era_5g_object_detection_common \
     && pip3 install -r requirement.txt \
     && pip3 install . 
 
-COPY --from=1 root/era_5g_object_detection_standalone /root/era_5g_object_detection_standalone
+COPY --from=0 root/era_5g_object_detection_standalone /root/era_5g_object_detection_standalone
 
 RUN cd /root/era_5g_object_detection_standalone \
     && pip3 install -r requirement.txt \
@@ -82,6 +65,3 @@ RUN chmod +x /root/fcw_service_start.sh
 ENV NETAPP_PORT=5897
     
 EXPOSE 5897
-EXPOSE 5001 5002 5003
-
-    

@@ -1,11 +1,11 @@
-import logging
 from typing import Dict
 from dataclasses import dataclass
-
 import numpy as np
 from filterpy.common import Q_discrete_white_noise
 from filterpy.kalman import KalmanFilter
 from shapely.geometry import LineString, Point, Polygon, box
+import logging
+logger = logging.getLogger(__name__)
 
 from fcw.core.geometry import *
 
@@ -174,11 +174,11 @@ class ForwardCollisionGuard:
         for tid in list(self.objects.keys()):
             if tid not in ref_points:
                 self.objects.pop(tid)
-                logging.info(f"Tracking of {tid} lost")
+                logger.info(f"Tracking of {tid} lost")
 
         for tid in ref_points.keys():
             if tid not in self.objects:
-                logging.info("Tracking object {tid}".format(tid=tid))
+                logger.info("Tracking object {tid}".format(tid=tid))
                 self.objects[tid] = PointWorldObject(ref_points[tid], self.dt)
             else:
                 self.objects[tid].update(ref_points[tid][:2])

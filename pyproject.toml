@@ -7,9 +7,9 @@ readme = "README.md"
 packages = [{include = "fcw"}]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11"
+python = ">=3.8,<3.11.4"
 pyyaml = "^6.0"
-#opencv-python = { file = "/home/robot/opencv-python/opencv_python-4.6.0.66-cp310-cp310-linux_x86_64.whl" }
+opencv-python = ">=4.6"
 filterpy = "^1.4.5"
 shapely = "^2.0.1"
 torch = "^2.0.0"

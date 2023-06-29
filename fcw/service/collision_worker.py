@@ -1,6 +1,6 @@
 from queue import Queue
 import time
-import flask_socketio
+import logging
 
 from era_5g_object_detection_common.image_detector import ImageDetector
 from era_5g_object_detection_standalone.worker import Worker
@@ -9,28 +9,33 @@ from fcw.core.detection import *
 from fcw.core.sort import Sort
 from fcw.core.yolo_detector import YOLODetector
 
+logger = logging.getLogger(__name__)
 
 class CollisionWorker(Worker, ImageDetector):
     def __init__(
         self,
         image_queue: Queue,
-        app,
+        sio,
         config: dict,
         camera_config: dict,
         fps: float,
         **kw
     ):
-        super().__init__(image_queue=image_queue, app=app, **kw)
+        super().__init__(image_queue=image_queue, sio=sio, **kw)
 
-        logging.info("Initializing object detector")
+        logger.info("Initializing object detector")
         self.detector = YOLODetector.from_dict(config.get("detector", {}))
-        logging.info("Initializing image tracker")
+        logger.info("Initializing image tracker")
         self.tracker = Sort.from_dict(config.get("tracker", {}))
-        logging.info("Initializing forward collision guard")
+        logger.info("Initializing forward collision guard")
         self.guard = ForwardCollisionGuard.from_dict(config.get("fcw", {}))
         self.guard.dt = 1 / fps
-        logging.info("Initializing camera calibration")
+        logger.info("Initializing camera calibration")
         self.camera = Camera.from_dict(camera_config)
+
+    def __del__(self):
+        logger.info("Delete object detector")
+        del self.detector
 
     def process_image(self, image):
         # Detect object in image
@@ -78,12 +83,10 @@ class CollisionWorker(Worker, ImageDetector):
                 # det["class_name"] = self.detector.model.names[result.label]
 
             # TODO:check timestamp exists
-            r = {"timestamp": metadata["timestamp"],
-                 "recv_timestamp": metadata["recv_timestamp"],
-                 "send_timestamp": time.time_ns(),
-                 "detections": detections}
-
-            # use the flask app to return the results
-            with self.app.app_context():
-                # print(f"publish_results to: {metadata['websocket_id']} flask_socketio.send: {r}")
-                flask_socketio.send(r, namespace='/results', to=metadata["websocket_id"])
+            result = {"timestamp": metadata["timestamp"],
+                      "recv_timestamp": metadata["recv_timestamp"],
+                      "timestamp_before_process": metadata["timestamp_before_process"],
+                      "timestamp_after_process": metadata["timestamp_after_process"],
+                      "send_timestamp": time.perf_counter_ns(),
+                      "detections": detections}
+            self.sio.emit('message', result, namespace='/results', to=metadata["websocket_id"])

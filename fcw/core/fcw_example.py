@@ -1,8 +1,6 @@
 """
 Early Collision Warning system
 """
-
-import logging
 from argparse import ArgumentParser, FileType
 import statistics
 from datetime import datetime
@@ -10,6 +8,10 @@ import cv2
 import yaml
 import time
 import csv
+import logging
+import sys
+logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logger = logging.getLogger("FCW example")
 
 from fcw.core.collision import get_reference_points, ForwardCollisionGuard
 from fcw.core.detection import detections_to_numpy
@@ -42,15 +44,13 @@ def parse_arguments():
 
 def main(args=None):
     args = parse_arguments()
+    logger.info("Starting Forward Collision Guard")
 
-    logging.basicConfig(level=logging.INFO)
-    logging.info("Starting Forward Collision Guard")
-
-    logging.info("Loading configuration file {cfg}".format(cfg=args.config.name))
+    logger.info("Loading configuration file {cfg}".format(cfg=args.config.name))
     config_dict = yaml.safe_load(args.config)
 
     # Open video
-    logging.info("Opening video {vid}".format(vid=args.source_video))
+    logger.info("Opening video {vid}".format(vid=args.source_video))
     video = cv2.VideoCapture(args.source_video)
     if not video.isOpened():
         raise Exception("Cannot open video file")
@@ -61,29 +61,29 @@ def main(args=None):
     width = int(video.get(cv2.CAP_PROP_FRAME_WIDTH))
     height = int(video.get(cv2.CAP_PROP_FRAME_HEIGHT))
     shape = height, width
-    logging.info("Video {W}x{H}, {fps} FPS".format(W=width, H=height, fps=fps))
+    logger.info("Video {W}x{H}, {fps} FPS".format(W=width, H=height, fps=fps))
 
     # Init object detector
     detector = YOLODetector.from_dict(config_dict.get("detector", {}))
 
     # Init image tracker
-    logging.info("Initializing image tracker")
+    logger.info("Initializing image tracker")
     tracker = Sort.from_dict(config_dict.get("tracker", {}))
     tracker.dt = 1 / fps
 
     # Init collision guard
-    logging.info("Initializing Forward warning")
+    logger.info("Initializing Forward warning")
     guard = ForwardCollisionGuard.from_dict(config_dict.get("fcw", {}))
     guard.dt = 1 / fps  # Finish setup if the guard
 
     # Load camera calibration
-    logging.info("Loading camera configuration {cfg}".format(cfg=args.camera.name))
+    logger.info("Loading camera configuration {cfg}".format(cfg=args.camera.name))
     camera_dict = yaml.safe_load(args.camera)
     camera = Camera.from_dict(camera_dict)
 
     render_output = args.viz or args.output is not None
     if render_output:
-        logging.warning("RENDERING OUTPUT - LOWER PERFOMANCE")
+        logger.warning("RENDERING OUTPUT - LOWER PERFOMANCE")
 
     if args.output is not None:
         output = cv2.VideoWriter(args.output, cv2.VideoWriter_fourcc(*"MP4V"), fps, camera.image_size)
@@ -92,7 +92,7 @@ def main(args=None):
         try:
             cv2.namedWindow("FCW")
         except Exception as ex:
-            logging.debug(ex)
+            logger.debug(ex)
 
     if render_output:
         # Prepare static stuff for vizualization
@@ -118,14 +118,14 @@ def main(args=None):
     while time.time_ns() - start_time < args.play_time * 1.0e+9:
         ret, img = video.read()
         if not ret or img is None:
-            logging.info("Video ended")
+            logger.info("Video ended")
             break
 
         time0 = time.time_ns()
         img_undistorted = camera.rectify_image(img)
         time1 = time.time_ns()
         time_elapsed_s = (time1 - time0) * 1.0e-9
-        logging.info(f"rectify_image time: {time_elapsed_s:.3f}")
+        logger.info(f"rectify_image time: {time_elapsed_s:.3f}")
 
         time0 = time.time_ns()
 
@@ -148,7 +148,7 @@ def main(args=None):
         dangerous_objects = guard.dangerous_objects()
 
         time1 = time.time_ns()
-        logging.info(f"Delay: {(time1 - time0) * 1.0e-9:.3f}s")
+        logger.info(f"Delay: {(time1 - time0) * 1.0e-9:.3f}s")
         delays.append((time1 - time0))
         timestamps.append(
             [
@@ -194,7 +194,7 @@ def main(args=None):
                 cv2.imshow("FCW", cv_image)
                 cv2.waitKey(1)
             except Exception as ex:
-                logging.debug(ex)
+                logger.debug(ex)
 
         if args.output is not None:
             output.write(cv_image)
@@ -204,10 +204,10 @@ def main(args=None):
     if args.output is not None:
         output.release()
 
-    logging.info(f"-----")
+    logger.info(f"-----")
     end_time = time.time_ns()
-    logging.info(f"Total streaming time: {(end_time - start_time) * 1.0e-9:.3f}s")
-    logging.info(f"Delay median: {statistics.median(delays) * 1.0e-9:.3f}s")
+    logger.info(f"Total streaming time: {(end_time - start_time) * 1.0e-9:.3f}s")
+    logger.info(f"Delay median: {statistics.median(delays) * 1.0e-9:.3f}s")
 
     if args.out_csv_dir is not None:
         out_csv_filename = f'{args.out_prefix}'
@@ -219,7 +219,7 @@ def main(args=None):
     try:
         cv2.destroyAllWindows()
     except Exception as ex:
-        logging.debug(ex)
+        logger.debug(ex)
 
 
 if __name__ == "__main__":

@@ -16,6 +16,9 @@ import cv2
 import numpy as np
 import torch
 from shapely.geometry import box
+import gc
+import logging
+logger = logging.getLogger(__name__)
 
 from fcw.core.detection import ObjectObservation
 
@@ -49,6 +52,20 @@ class YOLODetector:
         self.max_size = max_size
         self.filter_in_frame = filter_in_frame
         self.min_area = min_area
+
+    def __del__(self):
+        self.memory_stats()
+        logger.info(f"Free torch cuda memory ...")
+        self.model.cpu()
+        del self.model
+        gc.collect()
+        torch.cuda.empty_cache()
+        self.memory_stats()
+
+    @staticmethod
+    def memory_stats():
+        logger.info(f"torch.cuda.memory_allocated(): {torch.cuda.memory_allocated() / 1024 ** 2}")
+        logger.info(f"torch.cuda.memory_cached(): {torch.cuda.memory_reserved() / 1024 ** 2}")
 
     @staticmethod
     def from_dict(d: dict) -> "YOLODetector":

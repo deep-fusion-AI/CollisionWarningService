@@ -1,4 +1,4 @@
-opencv-python~=4.6.0.37  # for usage with GStreamer, one has to compile OpenCV with its support turned on
+opencv-python
 PyYAML
 filterpy
 shapely
