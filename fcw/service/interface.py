@@ -203,8 +203,7 @@ def image_callback_websocket(sid, data: dict):
         {"sid": eio_sid,
          "timestamp": timestamp,
          "recv_timestamp": time.perf_counter_ns(),
-         "websocket_id": get_results_sid(sio.manager.eio_sid_from_sid(sid, "/data")),
-         "decoded": True},
+         "websocket_id": get_results_sid(sio.manager.eio_sid_from_sid(sid, "/data"))},
         image
     )
 
@@ -230,7 +229,7 @@ def json_callback_websocket(sid, data):
 def command_callback_websocket(sid, data: Dict):
     command = ControlCommand(**data)
     logger.info(f"Control command {command} processing: session id: {sid}")
-    if command and command.cmd_type == ControlCmdType.RESET_STATE:
+    if command and command.cmd_type == ControlCmdType.SET_STATE:
         args = command.data
         h264 = False
         config = {}
