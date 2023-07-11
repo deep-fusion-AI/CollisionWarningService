@@ -1,5 +1,5 @@
+pyyaml
 opencv-python
-PyYAML
 filterpy
 shapely
 torch
@@ -11,3 +11,4 @@ torchvision
 #pip3 install --upgrade --force-reinstall torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu116
 tqdm
 seaborn
+ultralytics

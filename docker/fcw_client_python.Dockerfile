@@ -1,17 +1,21 @@
 FROM python:3.8-slim
 
+RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata
+
 RUN apt-get update \
-    && apt-get install -y python3-pip git
+    && apt-get install -y \
+    git \
+    python3-pip \
+    python-is-python3 \
+    build-essential \
+    cmake \
+    gcc \
+    ffmpeg
 
 RUN python -m pip install --upgrade pip
 
-RUN mkdir -p /root/opencv
-
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Prague
-
-RUN cd /root/opencv \
-    && pip3 install *.whl
 
 RUN cd /root/ \
     && git clone https://github.com/klepo/era-5g-client.git
@@ -20,7 +24,12 @@ RUN cd /root/era-5g-client \
     && pip3 install -r requirements.txt \
     && pip3 install .
 
-ENTRYPOINT ["/root/fcw_client_python_start.sh"]
+RUN cd /root/ \
+    && git clone https://github.com/klepo/era-5g-interface.git
+
+RUN cd /root/era-5g-interface \
+    && pip3 install -r requirements.txt \
+    && pip3 install .
 
 COPY fcw/client_python/ /root/fcw/client_python
 
@@ -34,14 +43,16 @@ COPY config /root/config
 COPY videos /root/videos
 
 COPY pyproject.toml /root/
+COPY poetry.lock /root/
 COPY README.md /root/
 
 RUN pip3 install poetry
 
-#export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
 RUN cd /root/ \
     && poetry config virtualenvs.create false \
     && poetry install
+
+ENTRYPOINT ["/root/fcw_client_python_start.sh"]
 
 COPY docker/fcw_client_python_start.sh /root/fcw_client_python_start.sh
 
