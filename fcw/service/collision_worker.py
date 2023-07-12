@@ -66,18 +66,18 @@ class CollisionWorker(Worker, ImageDetector):
         """
         # Get list of current offenses
         dangerous_objects = self.guard.dangerous_objects()
-        detections = list()
+        detections = dict()
         if tracked_objects is not None:
             for tid, t in tracked_objects.items():
                 x1, y1, x2, y2 = t.get_state()[0]
                 det = dict()
                 det["bbox"] = [x1, y1, x2, y2]
-                det["score"] = 0
+                det["dangerous_distance"] = 0
 
                 if tid in dangerous_objects.keys():
                     dist = Point(dangerous_objects[tid].location).distance(self.guard.vehicle_zone)
-                    det["score"] = dist
-                detections.append(det)
+                    det["dangerous_distance"] = dist
+                detections[tid] = det
 
                 # det["class"] = result.label
                 # det["class_name"] = self.detector.model.names[result.label]

@@ -92,7 +92,7 @@ def main(args=None):
         try:
             cv2.namedWindow("FCW")
         except Exception as ex:
-            logger.debug(ex)
+            logger.debug(repr(ex))
 
     if render_output:
         # Prepare static stuff for vizualization
@@ -194,7 +194,7 @@ def main(args=None):
                 cv2.imshow("FCW", cv_image)
                 cv2.waitKey(1)
             except Exception as ex:
-                logger.debug(ex)
+                logger.debug(repr(ex))
 
         if args.output is not None:
             output.write(cv_image)
@@ -219,7 +219,7 @@ def main(args=None):
     try:
         cv2.destroyAllWindows()
     except Exception as ex:
-        logger.debug(ex)
+        logger.debug(repr(ex))
 
 
 if __name__ == "__main__":

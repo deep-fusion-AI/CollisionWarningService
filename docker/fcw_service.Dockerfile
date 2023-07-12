@@ -37,13 +37,13 @@ RUN cd /root/era-5g-interface \
 
 COPY fcw/core/ /root/fcw/core
 
-RUN cd /root/fcw/core \
-    && pip3 install -r requirements.txt
+#RUN cd /root/fcw/core \
+#    && pip3 install -r requirements.txt
 
 COPY fcw/service/ /root/fcw/service
 
-RUN cd /root/fcw/service \
-    && pip3 install -r requirements.txt
+#RUN cd /root/fcw/service \
+#    && pip3 install -r requirements.txt
 
 COPY pyproject.toml /root/
 COPY poetry.lock /root/

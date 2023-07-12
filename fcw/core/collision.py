@@ -174,11 +174,11 @@ class ForwardCollisionGuard:
         for tid in list(self.objects.keys()):
             if tid not in ref_points:
                 self.objects.pop(tid)
-                logger.info(f"Tracking of {tid} lost")
+                logger.info(f"Tracking object with id {tid} lost")
 
         for tid in ref_points.keys():
             if tid not in self.objects:
-                logger.info("Tracking object {tid}".format(tid=tid))
+                logger.info("Tracking object with id {tid}".format(tid=tid))
                 self.objects[tid] = PointWorldObject(ref_points[tid], self.dt)
             else:
                 self.objects[tid].update(ref_points[tid][:2])

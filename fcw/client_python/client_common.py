@@ -20,7 +20,7 @@ logger = logging.getLogger(__name__)
 
 image_storage: Dict[int, np.ndarray] = dict()
 
-DEBUG_PRINT_SCORE = True  # Prints score.
+DEBUG_PRINT_WARNING = True  # Prints score.
 DEBUG_PRINT_DELAY = True  # Prints the delay between capturing image and receiving the results.
 
 # IP address or hostname of the computer, where the FCW service is deployed
@@ -101,12 +101,11 @@ class ResultsReader:
 
         # Process detections
         if "detections" in results:
-            if DEBUG_PRINT_SCORE:
-                detections = results["detections"]
-                for d in detections:
-                    score = float(d["score"])
+            if DEBUG_PRINT_WARNING:
+                for tracked_id, detection in results["detections"].items():
+                    score = float(detection["dangerous_distance"])
                     if score > 0:
-                        logger.info(f"Score: {score}")
+                        logger.info(f"Dangerous distance {score:.2f}m to the object with id {tracked_id}")
 
         # Process timestamps
         if "timestamp" in results:
@@ -177,6 +176,10 @@ class CollisionWarningClient:
 
         width, height = self.camera.rectified_size
         self.fps = fps
+        # Check bad loaded FPS
+        if self.fps > 60:
+            logger.warning(f"FPS {self.fps} is strangely high, newly set to 30")
+            self.fps = 30
         self.results_callback = results_callback
         if self.results_callback is None:
             self.results_viewer = ResultsReader(
