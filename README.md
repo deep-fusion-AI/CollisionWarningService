@@ -65,7 +65,14 @@ docker build -f fcw_service.Dockerfile -t but5gera/fcw_service . \
 
 The FCW Service can also be run locally using [fcw/service/interface.py](fcw/service/interface.py), 
 but all necessary dependencies must be installed in the used python environment
-and the NETAPP_PORT environment variable should be set (default is 5896).
+and the NETAPP_PORT environment variable should be set (default is 5896):
+```bash
+set NETAPP_PORT=5897
+```
+or on Linux:
+```bash
+export NETAPP_PORT=5897
+```
 
 Requirements:
 - `git`
@@ -74,14 +81,22 @@ Requirements:
 - `CUDA`
 - `poetry`
 
-At now, FCW Service package collision-warning-service contains both client and server parts. This package depends on
+At now, FCW Service package collision-warning-service contains both server and client (examples) parts. This package depends on
 - `era_5g_object_detection_common`
 - `era_5g_object_detection_standalone`
 - `era-5g-interface`
 - `era-5g-client`
 
+Clone this repository somewhere first:
+
+```bash
+git clone https://github.com/5G-ERA/CollisionWarningService.git
+cd CollisionWarningService
+```
+
 For proper functioning, it is not yet possible (will be after the pip releases of the updated compatible packages) to install all current packages via pip, and they can be installed 
 e.g. like this (The order of installation is important, otherwise incompatible versions from pip may be installed):
+
 ```bash
 git clone https://github.com/klepo/Reference-NetApp.git
 cd Reference-NetApp/src/python/era_5g_object_detection_common
@@ -110,15 +125,64 @@ cd ..
 poetry install
 ```
 
-Run FCW service
+Run FCW service:
 
 ```bash
 poetry run fcw_service
 ```
 
+For CUDA accelerated version, on Windows may be needed e.g.:
+```bash
+pip3 install --upgrade --force-reinstall torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118
+```
+It depends on the version of CUDA on the system [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/).
+
 ## Run client
 
-TODO
+If FCW service is installed locally, just install compatible era-5g-client:
+
+```bash
+cd ../../../..
+git clone https://github.com/klepo/era-5g-client.git
+cd era-5g-client
+pip3 install -r requirements.txt
+pip3 install -e .
+```
+Editable install mode `-e` is mode is needed due to `BUILD` file name collision and `build` folder creation on Windows.
+
+It will probably be necessary to reinstall era-5g-interface, due to the incompatibility of packages on pip:
+```bash
+cd ..
+cd era-5g-interface
+pip3 install -e .
+```
+
+Set NETAPP_PORT environment variable (default is 5896):
+```bash
+set NETAPP_PORT=5897
+```
+or on Linux:
+```bash
+export NETAPP_PORT=5897
+```
+
+Run FCW python simple client example:
+
+```bash
+poetry run fcw_client_python_simple -c config/config.yaml --camera videos/video3.yaml videos/video3.mp4
+```
+
+or run simple client with rtsp stream (yaml files are not compatible with tshi rtsp stream, it is for example only):
+
+```bash
+poetry run fcw_client_python_simple -c config/config.yaml --camera videos/video3.yaml rtsp://root:upgm_c4m3r4@upgm-ipkam5.fit.vutbr.cz/axis-media/media.amp
+```
+
+or run advanced client:
+
+```bash
+poetry run fcw_client_python -c config/config.yaml --camera videos/video3.yaml videos/video3.mp4
+```
 
 ## Notes
 
