@@ -1,3 +1,4 @@
+era_5g_client
+era_5g_interface
 opencv-python
 pyyaml
-era_5g_client

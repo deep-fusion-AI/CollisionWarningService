@@ -14,7 +14,6 @@ import yaml
 from fcw.core.geometry import Camera
 
 from era_5g_client.client_base import NetAppClientBase
-from era_5g_client.dataclasses import NetAppLocation
 
 logger = logging.getLogger(__name__)
 
@@ -23,11 +22,8 @@ image_storage: Dict[int, np.ndarray] = dict()
 DEBUG_PRINT_WARNING = True  # Prints score.
 DEBUG_PRINT_DELAY = True  # Prints the delay between capturing image and receiving the results.
 
-# IP address or hostname of the computer, where the FCW service is deployed
-NETAPP_ADDRESS = os.getenv("NETAPP_ADDRESS", "127.0.0.1")
-
-# Port of the FCW service
-NETAPP_PORT = os.getenv("NETAPP_PORT", 5896)
+# URL of the FCW service
+NETAPP_ADDRESS = str(os.getenv("NETAPP_ADDRESS", "http://localhost:5896"))
 
 
 class ResultsReader:
@@ -145,7 +141,7 @@ class CollisionWarningClient:
         self,
         config: Path,
         camera_config: Path,
-        netapp_location: NetAppLocation = NetAppLocation(NETAPP_ADDRESS, NETAPP_PORT),
+        netapp_address: str = NETAPP_ADDRESS,
         fps: float = 30,
         results_callback: Optional[Callable] = None,
         stream_type: Optional[StreamType] = StreamType.H264,
@@ -157,7 +153,7 @@ class CollisionWarningClient:
         Args:
             config (Path): Path to FCW configuration file.
             camera_config (Path): Path to camera configuration file.
-            netapp_location (NetAppLocation, optional): The URI and port of the FCW service interface.
+            netapp_address (str, optional): The URI and port of the FCW service interface.
                 Default taken from environment variables NETAPP_ADDRESS and NETAPP_PORT.
             fps (float, optional): Video FPS. Default to 30.
             results_callback (Callable, optional): Callback for receiving results.
@@ -192,21 +188,20 @@ class CollisionWarningClient:
         # Create FCW client
         self.client = NetAppClientBase(self.results_callback)
         logger.info(
-            f"Register with netapp_address: {netapp_location.address}"
-            f", netapp_port: {netapp_location.port}"
+            f"Register with netapp_address: {netapp_address}"
         )
         # Register client
         try:
             if self.stream_type is StreamType.H264:
                 self.client.register(
-                    netapp_location,
+                    netapp_address,
                     args={"h264": True, "config": self.config_dict, "camera_config": self.camera_config_dict,
                           "fps": self.fps,
                           "width": width, "height": height}
                 )
             elif self.stream_type is StreamType.JPEG:
                 self.client.register(
-                    netapp_location,
+                    netapp_address,
                     args={"config": self.config_dict, "camera_config": self.camera_config_dict, "fps": self.fps}
                 )
             else:
@@ -233,6 +228,7 @@ class CollisionWarningClient:
 
     def stop(self) -> None:
         """Print stats and disconnect from FCW service."""
+        logger.info("Collision warning client stopping")
 
         if hasattr(self, "results_viewer") and self.results_viewer is not None:
             self.results_viewer.stats(self.frame_id)

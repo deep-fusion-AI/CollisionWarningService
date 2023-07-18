@@ -7,6 +7,7 @@ from pathlib import Path
 import cv2
 import sys
 import logging
+import os
 
 # FCW and 5G-ERA stuff
 from fcw.client_python.client_common import CollisionWarningClient
@@ -17,9 +18,6 @@ from era_5g_interface.utils.rate_timer import RateTimer
 # Set logging
 logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger("FCW client python")
-
-# Stopped flag for SIGTERM handler
-stopped = False
 
 # Testing video file
 TEST_VIDEO_FILE = str("../../videos/video3.mp4")
@@ -32,6 +30,22 @@ CONFIG_FILE = Path("../../config/config.yaml")
 # Testing camera settings - specific for the particular input
 CAMERA_CONFIG_FILE = Path("../../videos/video3.yaml")
 # CAMERA_CONFIG_FILE = Path("../../videos/bringauto.yaml")
+
+# topped flag for SIGTERM handler (stopping video frames sending)
+stopped = False
+collision_warning_client = None
+
+
+def signal_handler(sig: int, frame) -> None:
+    """Signal handler for SIGTERM and SIGINT."""
+    logger.info(f"Terminating ({signal.Signals(sig).name})...")
+    global stopped
+    stopped = True
+    # collision_warning_client.stop()
+
+
+signal.signal(signal.SIGTERM, signal_handler)
+signal.signal(signal.SIGINT, signal_handler)
 
 
 def main() -> None:
@@ -54,20 +68,7 @@ def main() -> None:
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs='?', default=TEST_VIDEO_FILE)
     args = parser.parse_args()
 
-    # Flag for stopping video frames sending
-    global stopped
-    stopped = False
-    collision_warning_client = None
-
-    def signal_handler(sig: int, frame) -> None:
-        """Signal handler for SIGTERM and SIGINT."""
-        logger.info(f"Terminating ({signal.Signals(sig).name})...")
-        global stopped
-        stopped = True
-        #collision_warning_client.stop()
-
-    signal.signal(signal.SIGTERM, signal_handler)
-    signal.signal(signal.SIGINT, signal_handler)
+    global collision_warning_client
 
     try:
         # Create a video capture to pass images to the NetApp
@@ -80,6 +81,7 @@ def main() -> None:
         if not args.fps:
             fps = cap.get(cv2.CAP_PROP_FPS)
             if fps > 60:
+                logger.warning(f"FPS {fps} is strangely high, newly set to 30")
                 fps = 30
         else:
             fps = args.fps
@@ -127,11 +129,13 @@ def main() -> None:
 
     except FailedToConnect as ex:
         logger.error(f"Failed to connect to server: {ex}")
+        sys.exit(1)
     except KeyboardInterrupt:
-        logger.info("Terminating...")
+        logger.info("Terminating ...")
     except Exception as ex:
         traceback.print_exc()
         logger.error(f"Exception: {repr(ex)}")
+        sys.exit(1)
     finally:
         if collision_warning_client is not None:
             collision_warning_client.stop()

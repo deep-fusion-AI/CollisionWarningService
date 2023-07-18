@@ -1,9 +1,10 @@
-from queue import Queue
+from multiprocessing import Queue
+from threading import Thread, Event
+from queue import Empty
 import time
 import logging
 
-from era_5g_object_detection_common.image_detector import ImageDetector
-from era_5g_object_detection_standalone.worker import Worker
+from era_5g_interface.interface_helpers import LatencyMeasurements
 from fcw.core.collision import *
 from fcw.core.detection import *
 from fcw.core.sort import Sort
@@ -11,7 +12,8 @@ from fcw.core.yolo_detector import YOLODetector
 
 logger = logging.getLogger(__name__)
 
-class CollisionWorker(Worker, ImageDetector):
+
+class CollisionWorker(Thread):
     def __init__(
         self,
         image_queue: Queue,
@@ -21,7 +23,12 @@ class CollisionWorker(Worker, ImageDetector):
         fps: float,
         **kw
     ):
-        super().__init__(image_queue=image_queue, sio=sio, **kw)
+        super().__init__(**kw)
+        self.stop_event = Event()
+        self.image_queue = image_queue
+        self.sio = sio
+        self.frame_id = 0
+        self.latency_measurements = LatencyMeasurements()
 
         logger.info("Initializing object detector")
         self.detector = YOLODetector.from_dict(config.get("detector", {}))
@@ -33,9 +40,37 @@ class CollisionWorker(Worker, ImageDetector):
         logger.info("Initializing camera calibration")
         self.camera = Camera.from_dict(camera_config)
 
+    def stop(self):
+        self.stop_event.set()
+
     def __del__(self):
         logger.info("Delete object detector")
         del self.detector
+
+    def run(self):
+        """
+        Periodically reads images from python internal queue process them.
+        """
+
+        logger.info(f"{self.name} thread is running.")
+
+        while not self.stop_event.is_set():
+            # Get image and metadata from input queue
+            try:
+                metadata, image = self.image_queue.get(block=True, timeout=1)
+            except Empty:
+                continue
+            metadata["timestamp_before_process"] = time.perf_counter_ns()
+            self.frame_id += 1
+            # logger.info(f"Worker received frame id: {self.frame_id} {metadata['timestamp']}")
+            try:
+                detections = self.process_image(image)
+                metadata["timestamp_after_process"] = time.perf_counter_ns()
+                self.publish_results(detections, metadata)
+            except Exception as e:
+                logger.error(f"Exception with image processing: {repr(e)}")
+
+        logger.info(f"{self.name} thread is stopping.")
 
     def process_image(self, image):
         # Detect object in image

@@ -1,6 +1,5 @@
 era_5g_interface
-era_5g_object_detection_common
-era_5g_object_detection_standalone
+opencv-python
+simple-websocket
 python-socketio
-flask-socketio
-flask-session
+flask

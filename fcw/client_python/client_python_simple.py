@@ -89,11 +89,13 @@ def main() -> None:
 
     except FailedToConnect as ex:
         logger.error(f"Failed to connect to server: {ex}")
+        sys.exit(1)
     except KeyboardInterrupt:
         logger.info("Terminating...")
     except Exception as ex:
         traceback.print_exc()
         logger.error(f"Exception: {repr(ex)}")
+        sys.exit(1)
     finally:
         if collision_warning_client is not None:
             collision_warning_client.stop()

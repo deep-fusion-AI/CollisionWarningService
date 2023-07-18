@@ -20,7 +20,11 @@ There are few basic requirements for the algorithm itself
 * `pytorch`
 
 Additional packages are required if you want to use the service as a Network Application within 5G-Era framework/
-* TODO
+* `era_5g_interface`
+* `era_5g_client`
+* `simple-websocket`
+* `python-socketio`
+* `flask`
 
 
 ## Installation
@@ -57,8 +61,8 @@ The FCW service can be started in docker, e.g.The FCL service can be run in dock
 ([docker/fcw_service.Dockerfile](docker/fcw_service.Dockerfile)), for example in this way, 
 where the GPU of the host computer is used and TCP port 5897 is mapped to the host network.
 ```bash
-docker build -f fcw_service.Dockerfile -t but5gera/fcw_service . \
-  && docker run -p 5897:5897 --network host --gpus all but5gera/fcw_service 
+docker build -f fcw_service.Dockerfile -t but5gera/fcw_service:0.1.0 . \
+  && docker run -p 5897:5897 --network host --gpus all but5gera/fcw_service:0.1.0 
 ```
 
 #### Local startup
@@ -82,10 +86,8 @@ Requirements:
 - `poetry`
 
 At now, FCW Service package collision-warning-service contains both server and client (examples) parts. This package depends on
-- `era_5g_object_detection_common`
-- `era_5g_object_detection_standalone`
-- `era-5g-interface`
-- `era-5g-client`
+- `era-5g-interface>=0.4.0`
+- `era-5g-client>=0.4.0`
 
 Clone this repository somewhere first:
 
@@ -93,30 +95,6 @@ Clone this repository somewhere first:
 git clone https://github.com/5G-ERA/CollisionWarningService.git
 cd CollisionWarningService
 ```
-
-For proper functioning, it is not yet possible (will be after the pip releases of the updated compatible packages) to install all current packages via pip, and they can be installed 
-e.g. like this (The order of installation is important, otherwise incompatible versions from pip may be installed):
-
-```bash
-git clone https://github.com/klepo/Reference-NetApp.git
-cd Reference-NetApp/src/python/era_5g_object_detection_common
-pip3 install -r requirements.txt
-pip3 install .
-```
-```bash
-cd ..
-cd era_5g_object_detection_standalone
-pip3 install -r requirements.txt
-pip3 install . 
-```
-```bash
-cd ../../../..
-git clone https://github.com/klepo/era-5g-interface.git
-cd era-5g-interface
-pip3 install -r requirements.txt
-pip3 install -e .
-```
-Editable install mode `-e` is mode is needed due to `BUILD` file name collision and `build` folder creation on Windows.
 
 Installation of collision-warning-service:
 
@@ -139,31 +117,13 @@ It depends on the version of CUDA on the system [https://pytorch.org/get-started
 
 ## Run client
 
-If FCW service is installed locally, just install compatible era-5g-client:
-
+Set NETAPP_PORT environment variable (default is http://localhost:5896):
 ```bash
-cd ../../../..
-git clone https://github.com/klepo/era-5g-client.git
-cd era-5g-client
-pip3 install -r requirements.txt
-pip3 install -e .
-```
-Editable install mode `-e` is mode is needed due to `BUILD` file name collision and `build` folder creation on Windows.
-
-It will probably be necessary to reinstall era-5g-interface, due to the incompatibility of packages on pip:
-```bash
-cd ..
-cd era-5g-interface
-pip3 install -e .
-```
-
-Set NETAPP_PORT environment variable (default is 5896):
-```bash
-set NETAPP_PORT=5897
+set NETAPP_ADDRESS=http://localhost:5897
 ```
 or on Linux:
 ```bash
-export NETAPP_PORT=5897
+export NETAPP_ADDRESS=http://localhost:5897
 ```
 
 Run FCW python simple client example:

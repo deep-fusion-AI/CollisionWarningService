@@ -1,36 +1,35 @@
 [tool.poetry]
 name = "collision-warning-service"
-version = "0.1.0"
+version = "0.1.1"
 description = "Early collision warning Network Application for Transportation use case"
 authors = ["Petr Kleparnik <pkleparnik@cognitechna.cz>", "Roman Juranek <rjuranek@cognitechna.cz>"]
 readme = "README.md"
+repository = "https://github.com/5G-ERA/CollisionWarningService"
 packages = [{include = "fcw"}]
 
 [tool.poetry.dependencies]
-python = ">=3.8,<3.11.4"
-pyyaml = "^6.0"
+python = ">=3.8,<3.11"
+gitpython = ">=3.1.30"
+simple-websocket = ">=0.9.0"
+pyyaml = ">=6.0"
 opencv-python = ">=4.6"
-filterpy = "^1.4.5"
-shapely = "^2.0.1"
-torch = "^2.0.0"
-more-itertools = "^9.1.0"
-pandas = "^2.0.0"
-requests = "^2.28.2"
-psutil = "^5.9.4"
+filterpy = ">=1.4.5"
+shapely = ">=2.0.1"
+torch = "==2.0.0"
 torchvision = "^0.15.1"
-tqdm = "^4.65.0"
-seaborn = "^0.12.2"
-#era_5g_object_detection_common = { path = "../Reference-NetApp/src/python/era_5g_object_detection_common/" }
-#era_5g_object_detection_common = { git = "https://github.com/klepo/Reference-NetApp.git", subdirectory = "src/python/era_5g_object_detection_common" }
-#era_5g_object_detection_standalone = { path = "../Reference-NetApp/src/python/era_5g_object_detection_standalone/" }
-#era_5g_object_detection_standalone = { git = "https://github.com/klepo/Reference-NetApp.git", subdirectory = "src/python/era_5g_object_detection_standalone" }
-#era-5g-client = { path = "../era-5g-client/" }
-#era-5g-client = { git = "https://github.com/klepo/era-5g-client.git" }
-#era-5g-interface = { path = "../era-5g-interface/" }
-#era-5g-interface = { git = "https://github.com/klepo/era-5g-interface.git" }
-python-socketio = "^5.7.2"
-flask-socketio = "^5.3.3"
-flask-session = "^0.4.0"
+torchaudio = "^2.0.1"
+more-itertools = ">=9.1.0"
+pandas = ">=2.0.0"
+requests = ">=2.28.2"
+psutil = ">=5.9.4"
+tqdm = ">=4.65.0"
+seaborn = ">=0.12.2"
+python-socketio = ">=5.8.0"
+flask = ">=2.2.3"
+ultralytics = ">=8.0.136"
+#era-5g-client = { url  = "https://github.com/5G-ERA/era-5g-client/releases/download/0.4.1/era_5g_client-0.4.0-py3-none-any.whl"}
+era-5g-client = ">=0.4.0"
+era-5g-interface = ">=0.4.0"
 
 [tool.poetry.scripts]
 fcw_service = "fcw.service.interface:main"
