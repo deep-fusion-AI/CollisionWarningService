@@ -61,8 +61,8 @@ The FCW service can be started in docker ([docker/fcw_service.Dockerfile](docker
 for example in this way, where the GPU of the host computer is used and 
 TCP port 5897 is mapped to the host network.
 ```bash
-docker build -f fcw_service.Dockerfile -t but5gera/fcw_service:0.1.0 . \
-  && docker run -p 5897:5897 --network host --gpus all but5gera/fcw_service:0.1.0 
+docker build -f fcw_service.Dockerfile -t but5gera/fcw_service:0.4.1 . \
+  && docker run -p 5897:5897 --network host --gpus all but5gera/fcw_service:0.4.1 
 ```
 
 #### Local startup
