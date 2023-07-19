@@ -1,0 +1,14 @@
+pyyaml
+opencv-python
+filterpy
+shapely
+torch
+more-itertools
+pandas
+requests
+psutil
+torchvision
+tqdm
+seaborn
+ultralytics
+fcw-core-utils

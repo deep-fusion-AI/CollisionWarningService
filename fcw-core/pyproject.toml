@@ -1,0 +1,35 @@
+[tool.poetry]
+name = "fcw-core"
+version = "0.4.3"
+description = "Early collision warning Network Application for Transportation use case - core part"
+authors = ["Petr Kleparnik <pkleparnik@cognitechna.cz>", "Roman Juranek <rjuranek@cognitechna.cz>"]
+readme = "README.md"
+repository = "https://github.com/5G-ERA/CollisionWarningService"
+packages = [{include = "fcw_core"}]
+
+[tool.poetry.dependencies]
+python = ">=3.8"
+gitpython = ">=3.1.30"
+pyyaml = ">=6.0"
+opencv-python = ">=4.6"
+filterpy = ">=1.4.5"
+shapely = ">=2.0.1"
+torch = "==2.0.0"
+torchvision = "^0.15.1"
+torchaudio = "^2.0.1"
+more-itertools = ">=9.1.0"
+pandas = ">=2.0.0"
+requests = ">=2.28.2"
+psutil = ">=5.9.4"
+tqdm = ">=4.65.0"
+seaborn = ">=0.12.2"
+ultralytics = ">=8.0.136"
+fcw-core-utils = ">=0.4.3"
+#pip3 install --upgrade --force-reinstall torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118
+
+[tool.poetry.scripts]
+fcw_example = "fcw_core.fcw_example:main"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

@@ -17,15 +17,13 @@ RUN python3 -m pip install --upgrade pip
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Prague
 
-COPY fcw/core/ /root/fcw/core
-COPY fcw/service/ /root/fcw/service
-COPY pyproject.toml /root/
-COPY poetry.lock /root/
-COPY README.md /root/
+COPY fcw-service/ /root/fcw-service
+COPY fcw-core/ /root/fcw-core
+COPY fcw-core-utils/ /root/fcw-core-utils
 
 RUN pip3 install poetry
 
-RUN cd /root/ \
+RUN cd /root/fcw-service \
     && poetry config virtualenvs.create false \
     && poetry install
 

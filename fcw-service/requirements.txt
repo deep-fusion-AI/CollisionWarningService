@@ -1,0 +1,7 @@
+era_5g_interface
+opencv-python
+simple-websocket
+python-socketio
+flask
+fcw-core-utils
+fcw-core
