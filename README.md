@@ -57,9 +57,9 @@ Relevant configurations are in `videos/video3.yaml` - camera config, and `config
 
 #### Docker
 
-The FCW service can be started in docker, e.g.The FCL service can be run in docker 
-([docker/fcw_service.Dockerfile](docker/fcw_service.Dockerfile)), for example in this way, 
-where the GPU of the host computer is used and TCP port 5897 is mapped to the host network.
+The FCW service can be started in docker ([docker/fcw_service.Dockerfile](docker/fcw_service.Dockerfile)), 
+for example in this way, where the GPU of the host computer is used and 
+TCP port 5897 is mapped to the host network.
 ```bash
 docker build -f fcw_service.Dockerfile -t but5gera/fcw_service:0.1.0 . \
   && docker run -p 5897:5897 --network host --gpus all but5gera/fcw_service:0.1.0 
@@ -68,8 +68,8 @@ docker build -f fcw_service.Dockerfile -t but5gera/fcw_service:0.1.0 . \
 #### Local startup
 
 The FCW Service can also be run locally using [fcw/service/interface.py](fcw/service/interface.py), 
-but all necessary dependencies must be installed in the used python environment
-and the NETAPP_PORT environment variable should be set (default is 5896):
+but all necessary dependencies must be installed and the NETAPP_PORT environment 
+variable should be set (default is 5896):
 ```bash
 set NETAPP_PORT=5897
 ```
