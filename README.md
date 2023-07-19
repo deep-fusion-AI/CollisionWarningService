@@ -86,8 +86,8 @@ Requirements:
 - `poetry`
 
 At now, FCW Service package collision-warning-service contains both server and client (examples) parts. This package depends on
-- `era-5g-interface>=0.4.0`
-- `era-5g-client>=0.4.0`
+- `era-5g-interface>=0.4.1`
+- `era-5g-client>=0.4.1`
 
 Clone this repository somewhere first:
 
