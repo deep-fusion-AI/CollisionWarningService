@@ -33,6 +33,6 @@ COPY docker/fcw_service_start.sh /root/fcw_service_start.sh
 
 RUN chmod +x /root/fcw_service_start.sh
 
-ENV NETAPP_PORT=5897
+ENV NETAPP_PORT=5896
     
-EXPOSE 5897
+EXPOSE 5896

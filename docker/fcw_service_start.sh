@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cd
+cd /root/fcw-service
 exec poetry run fcw_service
