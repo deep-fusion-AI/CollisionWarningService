@@ -1,4 +1,4 @@
-# CollisionWarningService
+# Forward Collision Warning Service
 
 The algorithm detects and tracks objects in video using SORT algorithm. For all objects, their projection to road 
 plane is calculated (i.e. camera calibration is necessary). Location of objects on the road plane is filtered by 
