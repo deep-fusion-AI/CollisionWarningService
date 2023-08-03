@@ -18,14 +18,14 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger("FCW client python")
 
 # Testing video file
-TEST_VIDEO_FILE = str("../../videos/video3.mp4")
+TEST_VIDEO_FILE = str("../../../videos/video3.mp4")
 # TEST_VIDEO_FILE = str("rtsp://127.0.0.1:8554/webcam.h264")
 
 # Testing configuration of the algorithm
-CONFIG_FILE = Path("../../config/config.yaml")
+CONFIG_FILE = Path("../../../config/config.yaml")
 
 # Testing camera settings - specific for the particular input
-CAMERA_CONFIG_FILE = Path("../../videos/video3.yaml")
+CAMERA_CONFIG_FILE = Path("../../../videos/video3.yaml")
 
 
 def results_callback(results: Dict[str, Any]) -> None:
@@ -76,6 +76,7 @@ def main() -> None:
         rate_timer = RateTimer(rate=fps)
 
         # Main processing loop
+        logger.info("Start sending images...")
         while True:
             # Read single frame from a stream
             ret, frame = cap.read()
@@ -91,7 +92,7 @@ def main() -> None:
         logger.error(f"Failed to connect to server: {ex}")
         sys.exit(1)
     except KeyboardInterrupt:
-        logger.info("Terminating...")
+        logger.info("Terminating ...")
     except Exception as ex:
         traceback.print_exc()
         logger.error(f"Exception: {repr(ex)}")

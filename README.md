@@ -25,6 +25,7 @@ Additional packages are required if you want to use the service as a Network App
 * `era-5g-interface>=0.4.1`
 * `era-5g-client>=0.4.1`
 * `simple-websocket`
+* `websocket-client`
 * `python-socketio`
 * `flask`
 
@@ -32,7 +33,29 @@ System packages:
 * `ffmpeg`
 * `CUDA`
 
-## Installation
+## Quick start
+
+Run FCW service in docker:
+```bash
+docker run -p 5896:5896 --gpus all but5gera/fcw_service:0.4.4 
+```
+Donwload sample files:\
+https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/video3.mp4 \
+https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/video3.yaml \
+https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/config.yaml 
+
+Install minimal client package:
+```bash
+python -m venv myvenv
+myvenv\Scripts\activate
+pip install fcw-client
+```
+Run client example:
+```bash
+fcw_client_python_simple -c config.yaml --camera video3.yaml video3.mp4
+```
+
+## Complete installation
 
 Create python virtual environment, e.g.:
 ```bash

@@ -15,6 +15,7 @@ import logging
 import sys
 
 from fcw_service.collision_worker import CollisionWorker
+from fcw_core.yolo_detector import YOLODetector
 
 from era_5g_interface.task_handler import TaskHandler
 from era_5g_interface.task_handler_internal_q import TaskHandlerInternalQ
@@ -307,6 +308,10 @@ def main(args=None):
     args = parser.parse_args()
 
     logger.info(f"The size of the queue set to: {NETAPP_INPUT_QUEUE}")
+
+    logger.info("Initializing default object detector for faster first startup")
+    detector = YOLODetector.from_dict({})
+    del detector
 
     # runs the flask server
     # allow_unsafe_werkzeug needs to be true to run inside the docker

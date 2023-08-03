@@ -186,9 +186,7 @@ class CollisionWarningClient:
 
         # Create FCW client
         self.client = NetAppClientBase(self.results_callback)
-        logger.info(
-            f"Register with netapp_address: {netapp_address}"
-        )
+        logger.info(f"Register with netapp_address: {netapp_address}")
         # Register client
         try:
             if self.stream_type is StreamType.H264:
@@ -208,6 +206,7 @@ class CollisionWarningClient:
         except Exception as e:
             self.client.disconnect()
             raise e
+        logger.info(f"Client registered")
 
     def send_image(self, frame: np.ndarray, timestamp: Optional[int] = None) -> None:
         """Send image to FCW service including rectification.

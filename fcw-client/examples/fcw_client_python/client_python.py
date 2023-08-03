@@ -114,6 +114,7 @@ def main() -> None:
         # Play time in ns
         play_time_ns = args.play_time * 1.0e+9
         # Main processing loop
+        logger.info("Start sending images ...")
         while time.perf_counter_ns() - start_time < play_time_ns and not stopped:
             # Read single frame from a stream
             ret, frame = cap.read()
