@@ -22,8 +22,8 @@ There are few basic requirements for the algorithm itself:
 * `pytorch`
 
 Additional packages are required if you want to use the service as a Network Application within 5G-Era framework:
-* `era-5g-interface>=0.4.1`
-* `era-5g-client>=0.4.1`
+* `era-5g-interface>=0.6.0`
+* `era-5g-client>=0.5.1`
 * `simple-websocket`
 * `websocket-client`
 * `python-socketio`
@@ -37,7 +37,7 @@ System packages:
 
 Run FCW service in docker:
 ```bash
-docker run -p 5896:5896 --gpus all but5gera/fcw_service:0.4.4 
+docker run -p 5896:5896 --gpus all but5gera/fcw_service:0.5.0 
 ```
 Donwload sample files:\
 https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/video3.mp4 \
@@ -103,14 +103,14 @@ The image can be built:
 ```bash
 cd ..
 cd fcw-core/docker 
-docker build -f fcw_service.Dockerfile -t but5gera/fcw_service:0.4.3 . 
+docker build -f fcw_service.Dockerfile -t but5gera/fcw_service:0.5.0 . 
 ```
 or the image directly from the Docker Hub can be used.
  
 The startup can be like this, where the GPU of the host computer is used and 
 TCP port 5896 is mapped to the host network.
 ```bash
-docker run -p 5896:5896 --network host --gpus all but5gera/fcw_service:0.4.3 
+docker run -p 5896:5896 --network host --gpus all but5gera/fcw_service:0.5.0 
 ```
 
 #### Local startup

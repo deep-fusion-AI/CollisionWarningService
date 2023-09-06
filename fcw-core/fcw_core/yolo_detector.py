@@ -37,7 +37,7 @@ class YOLODetector:
         filter_in_frame: bool = True,
         min_area: float = None
     ):
-        self.model = torch.hub.load("ultralytics/yolov5", model, pretrained=True)
+        self.model = torch.hub.load("ultralytics/yolov5", model, pretrained=True, trust_repo=True)
         self.model.agnostic = False
         self.model.iou = 0.7
         classes = classes or YOLODetector.default_classes

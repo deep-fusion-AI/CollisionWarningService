@@ -36,8 +36,8 @@ def results_callback(results: Dict[str, Any]) -> None:
         """
 
     # Process detections
-    if "detections" in results:
-        for tracked_id, detection in results["detections"].items():
+    if "dangerous_detections" in results:
+        for tracked_id, detection in results["dangerous_detections"].items():
             score = float(detection["dangerous_distance"])
             if score > 0:
                 logger.info(f"Dangerous distance {score:.2f}m to the object with id {tracked_id}")

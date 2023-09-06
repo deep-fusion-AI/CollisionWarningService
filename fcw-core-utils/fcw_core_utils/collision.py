@@ -5,6 +5,7 @@ from filterpy.common import Q_discrete_white_noise
 from filterpy.kalman import KalmanFilter
 from shapely.geometry import LineString, Point, Polygon, box
 import logging
+
 logger = logging.getLogger(__name__)
 
 from fcw_core_utils.geometry import *
@@ -202,7 +203,8 @@ class ForwardCollisionGuard:
         Check future paths of objects and filter dangerous ones
         """
         for tid, obj in self.objects.items():
-            if obj.xy is None: continue
+            if obj.xy is None:
+                continue
 
             loc = Point(obj.location)
             dist = loc.distance(self.vehicle_zone)
@@ -218,6 +220,7 @@ class ForwardCollisionGuard:
                 ttc = None
 
             yield ObjectStatus(
+                id=tid,
                 distance=dist,
                 location=loc,
                 path=path,
@@ -229,6 +232,8 @@ class ForwardCollisionGuard:
 
 @dataclass
 class ObjectStatus:
+    # Tracked object id
+    id: int
     # Distance from the reference point to vehicle zone
     distance: float
     # Location relative to vehicle reference point
@@ -263,7 +268,8 @@ def intersection_point(ls: LineString, p: LineString):
     d = 0
     for a, b in pairwise(coords):
         l = LineString([a, b])
-        pt = l.intersection(p)
-        if not pt.is_empty:
-            return Point(a).distance(pt) + d
+        if l.intersects(p):
+            pt = l.intersection(p)
+            if not pt.is_empty:
+                return Point(a).distance(pt) + d
         d += l.length

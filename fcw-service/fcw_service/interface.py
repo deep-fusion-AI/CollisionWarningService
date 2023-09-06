@@ -198,7 +198,7 @@ def image_callback_websocket(sid, data: dict):
         )
         return
 
-    task.store_image(
+    task.store_data(
         {"sid": eio_sid,
          "timestamp": timestamp,
          "recv_timestamp": time.perf_counter_ns(),
@@ -226,9 +226,33 @@ def json_callback_websocket(sid, data):
 
 @sio.on('command', namespace='/control')
 def command_callback_websocket(sid, data: Dict):
-    command = ControlCommand(**data)
+    eio_sid = sio.manager.eio_sid_from_sid(sid, '/control')
+    try:
+        command = ControlCommand(**data)
+    except TypeError as e:
+        logger.error(f"Could not parse Control Command. {str(e)}")
+        sio.emit(
+            "control_cmd_error",
+            {"error": f"Could not parse Control Command. {str(e)}"},
+            namespace='/control',
+            to=sid
+        )
+        return
+
     logger.info(f"Control command {command} processing: session id: {sid}")
-    if command and command.cmd_type == ControlCmdType.SET_STATE:
+
+    if command and command.cmd_type == ControlCmdType.INIT:
+        # Check that initialization has not been called before
+        if eio_sid in tasks:
+            logger.error(f"Client attempted to call initialization multiple times.")
+            sio.emit(
+                "control_cmd_error",
+                {"error": "Initialization has already been called before."},
+                namespace='/control',
+                to=sid
+            )
+            return
+
         args = command.data
         h264 = False
         config = {}
@@ -250,7 +274,6 @@ def command_callback_websocket(sid, data: Dict):
 
         # queue with received images
         image_queue = Queue(NETAPP_INPUT_QUEUE)
-        eio_sid = sio.manager.eio_sid_from_sid(sid, '/control')
 
         if h264:
             task = TaskHandlerInternalQ(eio_sid, image_queue, decoder=H264Decoder(fps, width, height))

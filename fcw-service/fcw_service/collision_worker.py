@@ -1,8 +1,10 @@
+from dataclasses import asdict
 from multiprocessing import Queue
 from threading import Thread, Event
 from queue import Empty
 import time
 import logging
+import socketio
 
 from era_5g_interface.interface_helpers import LatencyMeasurements
 from fcw_core_utils.collision import *
@@ -17,7 +19,7 @@ class CollisionWorker(Thread):
     def __init__(
         self,
         image_queue: Queue,
-        sio,
+        sio: socketio.Server,
         config: dict,
         camera_config: dict,
         fps: float,
@@ -101,7 +103,10 @@ class CollisionWorker(Thread):
         """
         # Get list of current offenses
         dangerous_objects = self.guard.dangerous_objects()
-        detections = dict()
+        dangerous_detections = dict()
+
+        object_statuses = list(self.guard.label_objects(include_distant=False))
+
         if tracked_objects is not None:
             for tid, t in tracked_objects.items():
                 x1, y1, x2, y2 = t.get_state()[0]
@@ -112,10 +117,15 @@ class CollisionWorker(Thread):
                 if tid in dangerous_objects.keys():
                     dist = Point(dangerous_objects[tid].location).distance(self.guard.vehicle_zone)
                     det["dangerous_distance"] = dist
-                detections[tid] = det
+                dangerous_detections[tid] = det
 
                 # det["class"] = result.label
                 # det["class_name"] = self.detector.model.names[result.label]
+
+            for object_status in object_statuses:
+                object_status.location = object_status.location.coords[0]
+                object_status.path = [pts for pts in object_status.path.coords]
+            object_statuses = [asdict(os) for os in object_statuses]
 
             # TODO:check timestamp exists
             result = {"timestamp": metadata["timestamp"],
@@ -123,5 +133,6 @@ class CollisionWorker(Thread):
                       "timestamp_before_process": metadata["timestamp_before_process"],
                       "timestamp_after_process": metadata["timestamp_after_process"],
                       "send_timestamp": time.perf_counter_ns(),
-                      "detections": detections}
+                      "dangerous_detections": dangerous_detections,
+                      "objects": object_statuses}
             self.sio.emit('message', result, namespace='/results', to=metadata["websocket_id"])

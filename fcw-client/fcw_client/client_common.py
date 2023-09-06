@@ -94,13 +94,15 @@ class ResultsReader:
 
         results_timestamp = time.perf_counter_ns()
 
-        # Process detections
-        if "detections" in results:
+        # Process dangerous detections
+        if "dangerous_detections" in results:
             if DEBUG_PRINT_WARNING:
-                for tracked_id, detection in results["detections"].items():
+                for tracked_id, detection in results["dangerous_detections"].items():
                     score = float(detection["dangerous_distance"])
                     if score > 0:
                         logger.info(f"Dangerous distance {score:.2f}m to the object with id {tracked_id}")
+        if "objects" in results:
+            logger.info(f"objects {results['objects']}")
 
         # Process timestamps
         if "timestamp" in results:
