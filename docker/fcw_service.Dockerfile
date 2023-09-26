@@ -13,7 +13,7 @@ RUN apt-get update \
     ffmpeg
 
 RUN python3 -m pip install --upgrade pip
-RUN pip install --upgrade pip
+RUN pip3 install --upgrade pip
 
 ARG DEBIAN_FRONTEND=noninteractive
 ENV TZ=Europe/Prague
@@ -22,7 +22,15 @@ COPY fcw-service/ /root/fcw-service
 COPY fcw-core/ /root/fcw-core
 COPY fcw-core-utils/ /root/fcw-core-utils
 
-RUN pip install poetry
+RUN pip3 install poetry
+
+RUN cd /root/fcw-core-utils \
+    && poetry config virtualenvs.create false \
+    && poetry install
+
+RUN cd /root/fcw-core \
+    && poetry config virtualenvs.create false \
+    && poetry install
 
 RUN cd /root/fcw-service \
     && poetry config virtualenvs.create false \
@@ -31,6 +39,7 @@ RUN cd /root/fcw-service \
 COPY docker/yolov5m6.pt /root/fcw-service/yolov5m6.pt
 COPY docker/yolov5n6.pt /root/fcw-service/yolov5n6.pt
 RUN git clone https://github.com/ultralytics/yolov5  # clone
+RUN cd yolov5 && git checkout tags/v7.0
 RUN cd yolov5 && pip3 install -r requirements.txt  # install
 RUN mkdir -p /root/.cache/torch/hub/ultralytics_yolov5_master
 RUN cp -r yolov5/* /root/.cache/torch/hub/ultralytics_yolov5_master

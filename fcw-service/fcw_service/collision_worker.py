@@ -135,4 +135,5 @@ class CollisionWorker(Thread):
                       "send_timestamp": time.perf_counter_ns(),
                       "dangerous_detections": dangerous_detections,
                       "objects": object_statuses}
+            # TODO: create publish function
             self.sio.emit('message', result, namespace='/results', to=metadata["websocket_id"])

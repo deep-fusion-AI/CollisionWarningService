@@ -3,7 +3,7 @@
 <package format="3">
   <name>fcw_client_ros2</name>
   <version>0.0.0</version>
-  <description>Collision Warning Service client</description>
+  <description>Early collision warning Network Application for Transportation use case - ROS 2 client</description>
   <maintainer email="p.kleparnik@cognitechna.cz">Petr Kleparnik</maintainer>
   <license>TODO: License declaration</license>
 

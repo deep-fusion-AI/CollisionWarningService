@@ -1,4 +1,3 @@
-import base64
 import argparse
 import binascii
 import os
@@ -79,7 +78,7 @@ def get_results_sid(eio_sid):
 
 
 @sio.on('connect', namespace='/data')
-def connect_data(sid, environ):
+def connect_data(sid, *_):
     """Creates a websocket connection to the client for passing the data.
 
     Raises:
@@ -92,9 +91,8 @@ def connect_data(sid, environ):
 
 
 @sio.on('connect', namespace='/control')
-def connect_control(sid, environ):
-    """_summary_
-    Creates a websocket connection to the client for passing control commands.
+def connect_control(sid, *_):
+    """Creates a websocket connection to the client for passing control commands.
 
     Raises:
         ConnectionRefusedError: Raised when attempt for connection were made
@@ -106,7 +104,7 @@ def connect_control(sid, environ):
 
 
 @sio.on('connect', namespace='/results')
-def connect_results(sid, environ):
+def connect_results(sid, *_):
     """Creates a websocket connection to the client for passing the results.
 
     Raises:
@@ -124,8 +122,8 @@ def image_callback_websocket(sid, data: dict):
 
     Args:
         sid ():
-        data (dict): A base64 encoded image frame and (optionally) related timestamp in format:
-            {'frame': 'base64data', 'timestamp': 'int'}
+        data (dict): An image frame and (optionally) related timestamp in format:
+            {'frame': 'bytes', 'timestamp': 'int'}
 
     Raises:
         ConnectionRefusedError: Raised when attempt for connection were made
@@ -185,8 +183,7 @@ def image_callback_websocket(sid, data: dict):
         if task.decoder:
             image = task.decoder.decode_packet_data(data["frame"])
         else:
-            frame = base64.b64decode(data["frame"])
-            image = cv2.imdecode(np.frombuffer(frame, dtype=np.uint8), cv2.IMREAD_COLOR)
+            image = cv2.imdecode(np.frombuffer(data["frame"], dtype=np.uint8), cv2.IMREAD_COLOR)
     except (ValueError, binascii.Error, Exception) as error:
         logger.error(f"Failed to decode frame data: {error}")
         sio.emit(
@@ -213,13 +210,13 @@ def json_callback_websocket(sid, data):
     Allows to receive general json data using the websocket transport
 
     Args:
+        sid ():
         data (dict): NetApp-specific json data
 
     Raises:
         ConnectionRefusedError: Raised when attempt for connection were made
             without registering first.
     """
-    print(data)
 
     logger.info(f"Client with task id: {sio.manager.eio_sid_from_sid(sid, '/data')} sent data {data}")
 

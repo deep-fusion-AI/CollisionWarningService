@@ -7,7 +7,6 @@ from pathlib import Path
 import cv2
 import sys
 import logging
-import os
 
 # FCW and 5G-ERA stuff
 from fcw_client.client_common import CollisionWarningClient
@@ -36,12 +35,11 @@ stopped = False
 collision_warning_client = None
 
 
-def signal_handler(sig: int, frame) -> None:
+def signal_handler(sig: int, *_) -> None:
     """Signal handler for SIGTERM and SIGINT."""
     logger.info(f"Terminating ({signal.Signals(sig).name})...")
     global stopped
     stopped = True
-    # collision_warning_client.stop()
 
 
 signal.signal(signal.SIGTERM, signal_handler)

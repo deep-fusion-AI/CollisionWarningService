@@ -114,7 +114,7 @@ class ResultsReader:
                 logger.info(
                     f"Result number {len(self.timestamps)}"
                     f", delay: {(results_timestamp - timestamp) * 1.0e-9:.3f}s"
-                    #f", recv frame delay: {(recv_timestamp - timestamp) * 1.0e-9:.3f}s"
+                    # f", recv frame delay: {(recv_timestamp - timestamp) * 1.0e-9:.3f}s"
                 )
                 self.delays.append((results_timestamp - timestamp))
                 self.delays_recv.append((recv_timestamp - timestamp))
