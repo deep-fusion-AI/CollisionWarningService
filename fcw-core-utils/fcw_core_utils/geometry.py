@@ -100,7 +100,10 @@ class Camera:
         image_size = d["image_size"]
         rectified_size = d["rectified_size"]
         # Measured intrinsic matrix
-        K = np.array(d["K"], "f")
+        if type(d.get("K")) == dict:
+            K = np.array(list(d["K"].values()), "f")
+        else:
+            K = np.array(d["K"], "f")
         # Measured distortion coefficients
         D = np.array(d["D"], "f")
         cam = Camera(image_size, rectified_size, K, D)
@@ -110,7 +113,10 @@ class Camera:
 
         # Estimate rotation matrix
         # Get points on horizon or simply one point in image center
-        h_points = np.atleast_2d(d.get("horizon_points", [(w / 2, h / 2)])).astype(np.float32)
+        if type(d.get("horizon_points")) == dict:
+            h_points = np.atleast_2d(list(d.get("horizon_points", [(w / 2, h / 2)]).values())).astype(np.float32)
+        else:
+            h_points = np.atleast_2d(d.get("horizon_points", [(w / 2, h / 2)])).astype(np.float32)
         # Get undistorted coords of the points
         h_points = cam.rectify_points(h_points)
         if h_points.shape[0] == 1:  # Single point case - add second point on the same line

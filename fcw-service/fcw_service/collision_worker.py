@@ -125,7 +125,7 @@ class CollisionWorker(Thread):
             for object_status in object_statuses:
                 object_status.location = object_status.location.coords[0]
                 object_status.path = [pts for pts in object_status.path.coords]
-            object_statuses = [asdict(os) for os in object_statuses]
+            object_statuses = [asdict(object_status) for object_status in object_statuses]
 
             # TODO:check timestamp exists
             result = {"timestamp": metadata["timestamp"],

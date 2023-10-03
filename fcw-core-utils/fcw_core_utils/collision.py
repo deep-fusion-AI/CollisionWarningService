@@ -156,7 +156,7 @@ class ForwardCollisionGuard:
     @staticmethod
     def from_dict(d):
         if type(d.get("danger_zone")) == dict:
-            zone = Polygon(d.get("danger_zone").values())
+            zone = Polygon(list(d.get("danger_zone").values()))
         else:
             zone = Polygon(d.get("danger_zone"))
         length, width = d.get("vehicle_length", 4), d.get("vehicle_width", 1.8)

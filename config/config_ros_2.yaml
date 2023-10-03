@@ -1,0 +1,76 @@
+/**:
+  ros__parameters:
+    # This is an example of FCW algorithm configuration
+    config:
+      # Configuration of detector
+      detector:
+        model: yolov5m6
+        max_image_size: 1000
+        min_score: 0.25
+        filter_in_frame: True
+        min_area: 100
+        classes:  # List of classes to detect
+          - car
+          - bus
+          - truck
+          - bicycle
+          - motorcycle
+          - person
+          # We can add more classes like dog, cow etc...
+
+      # Configuration of SORT tracker
+      tracker:
+        min_hits: 2
+        max_age: 4
+        iou: 0.3
+
+      # Example configuration of warning
+      fcw:
+        safety_radius: 50  # [m] consider objects in this radius
+        danger_zone:  # Polygon defining danger zone around the vehicle [(x,y), ...]
+          '0': [ 3, 2]
+          '1': [20, 2]
+          '2': [20,-2]
+          '3': [ 3,-2]
+        vehicle_length: 4.6
+        vehicle_width: 1.8
+        vehicle_zone_buffer: 0.5
+        prediction_length: 1.0  # [s] path prediction time
+        prediction_step: 0.1  # [s] integration step for prediction
+    camera_config:
+      # Intrinsic parameters
+      image_size: [962, 720]  # (w,h) [px]
+      rectified_size: [400, 300]  # (w,h) [px]
+
+      # Estimated horizontal FOV is 60 deg -> 1321 px
+      K:
+        '0': [1321,   0, 481]
+        '1': [  0, 1321, 360]
+        '2': [  0,    0,   1]
+
+      # Distortion parameters so lines in image are straight
+      # Manual estimate in this case
+      D: [-0.1, 0.0, 0.0, 0.0]
+
+      # Extrinsic parameters - camera orientation and location in vehicle space
+      view_direction: x
+      location: [0.5, 0.0, 1.3]
+
+      # Few points on horizon where the FIRST point marks
+      # the direction of X axis (or -X) of the vehicle
+      # These points were measured manually in the image
+      # There are 3 distinct cases:
+      # * no points (missing field) - assumed vanishing point in image center and zero roll
+      # * single point - assumed zero roll
+      # * Multiple points - full rotation
+      horizon_points:
+        '0': [498, 366]  # This is where the vehicle is heading
+        # - [10, 373]
+        # - [77, 374]
+        # - [191, 372]
+        # - [320, 371]
+        # - [419, 371]
+        # - [575, 367]
+        # - [729, 367]
+        # - [852, 366]
+        # - [942, 365]

@@ -281,7 +281,8 @@ def command_callback_websocket(sid, data: Dict):
         worker = CollisionWorker(
             image_queue, sio,
             config, camera_config, fps,
-            name=f"Detector {eio_sid}"
+            name=f"Detector {eio_sid}",
+            daemon=True
         )
 
         tasks[eio_sid] = TaskAndWorker(task, worker)
