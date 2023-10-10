@@ -1,6 +1,7 @@
 """
 Early Collision Warning system
 """
+import json
 from argparse import ArgumentParser, FileType
 import statistics
 from datetime import datetime
@@ -95,7 +96,7 @@ def main(args=None):
             logger.debug(repr(ex))
 
     if render_output:
-        # Prepare static stuff for vizualization
+        # Prepare static stuff for visualization
         logo = cog_logo((64, 64))
         coord_sys = draw_world_coordinate_system(camera.rectified_size, camera)
         coord_sys.putalpha(64)
@@ -140,6 +141,7 @@ def main(args=None):
             t.id: t for t in tracker.trackers
             if t.hit_streak > tracker.min_hits and t.time_since_update < 1 and t.age > 3
         }
+
         # Get 3D locations of objects
         ref_pt = get_reference_points(tracked_objects, camera, is_rectified=True)
         # Update state of objects in world
@@ -160,7 +162,7 @@ def main(args=None):
         )
 
         if render_output:
-            # Vizualization
+            # Visualization
             base_undistorted = Image.fromarray(img_undistorted[..., ::-1], "RGB").convert("L").convert("RGBA")
             # Base layer is the camera image
             base = Image.fromarray(img[..., ::-1], "RGB").convert("RGBA")
@@ -173,9 +175,10 @@ def main(args=None):
                 (draw_image_trackers(sz, tracker.trackers), None),
                 (draw_world_objects(sz, camera, guard.objects.values()), None),
             ]
+
             # Compose layers together
             compose_layers(base_undistorted, *layers)
-            O = list(guard.label_objects(include_distant=True))
+            O = list(guard.label_objects(include_distant=False))
             w, h = base.size
             w1, h1 = base_undistorted.size
             compose_layers(

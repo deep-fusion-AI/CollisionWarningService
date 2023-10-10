@@ -15,7 +15,7 @@ class ObjectObservation:
         return self.geometry.bounds
 
     def numpy(self):
-        return np.atleast_2d(self.bounds() + (self.score,))
+        return np.atleast_2d(self.bounds() + (self.score,) + (self.label,))
 
     def is_in_frame(self, shape, margin=5):
         h, w = shape
@@ -25,5 +25,5 @@ class ObjectObservation:
 
 def detections_to_numpy(detections: Iterable[ObjectObservation]) -> np.ndarray:
     detections = [d.numpy() for d in detections]
-    detections.append(np.empty((0, 5)))  # vstack does not accept empty list - we add empty array, so it does not fail
+    detections.append(np.empty((0, 6)))  # vstack does not accept empty list - we add empty array, so it does not fail
     return np.vstack(detections)

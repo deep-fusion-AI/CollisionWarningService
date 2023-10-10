@@ -84,7 +84,7 @@ def convert_x_to_bbox(x, score=None):
     if score is None:
         return np.array([x[0] - w / 2., x[1] - h / 2., x[0] + w / 2., x[1] + h / 2.]).reshape((1, 4))
     else:
-        return np.array([x[0] - w / 2., x[1] - h / 2., x[0] + w / 2., x[1] + h / 2., score]).reshape((1, 5))
+        return np.array([x[0] - w / 2., x[1] - h / 2., x[0] + w / 2., x[1] + h / 2., score]).reshape((1, 6))
 
 
 class KalmanBoxTracker(object):
@@ -124,6 +124,7 @@ class KalmanBoxTracker(object):
         self.hits = 0
         self.hit_streak = 0
         self.age = 0
+        self.label = int(bbox[5])
 
     def update(self, bbox):
         """
@@ -163,7 +164,7 @@ def associate_detections_to_trackers(detections, trackers, iou_threshold=0.3):
     Returns 3 lists of matches, unmatched_detections and unmatched_trackers
     """
     if len(trackers) == 0:
-        return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.empty((0, 5), dtype=int)
+        return np.empty((0, 2), dtype=int), np.arange(len(detections)), np.empty((0, 6), dtype=int)
 
     iou_matrix = iou_batch(detections, trackers)
 
@@ -221,7 +222,7 @@ class Sort:
             iou_threshold=d.get("iou", 0.3),
         )
 
-    def update(self, detections=np.empty((0, 5))):
+    def update(self, detections=np.empty((0, 6))):
         """
         Params:
           detections - a numpy array of detections in the format [[x1,y1,x2,y2,score],[x1,y1,x2,y2,score],...]
@@ -266,7 +267,7 @@ class Sort:
                 self.trackers.pop(i)
         if len(ret) > 0:
             return np.concatenate(ret)
-        return np.empty((0, 5))
+        return np.empty((0, 6))
 
 # def parse_args():
 #     """Parse input arguments."""

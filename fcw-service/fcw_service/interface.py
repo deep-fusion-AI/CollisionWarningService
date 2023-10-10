@@ -257,17 +257,22 @@ def command_callback_websocket(sid, data: Dict):
         fps = 30
         width = 0
         height = 0
+        viz = True
+        viz_zmq_port = 5558
         if args:
-            h264 = args.get("h264", False)
-            config = args.get("config", {})
-            camera_config = args.get("camera_config", {})
-            fps = args.get("fps", 30)
-            width = args.get("width", 0)
-            height = args.get("height", 0)
+            h264 = args.get("h264", h264)
+            config = args.get("config", config)
+            camera_config = args.get("camera_config", camera_config)
+            fps = args.get("fps", fps)
+            width = args.get("width", width)
+            height = args.get("height", height)
+            viz = args.get("viz", viz)
+            viz_zmq_port = args.get("viz_zmq_port", viz_zmq_port)
             logger.info(f"H264: {h264}")
             logger.info(f"Config: {config}")
             logger.info(f"Camera config: {camera_config}")
             logger.info(f"Video {width}x{height}, {fps} FPS")
+            logger.info(f"ZeroMQ visualization: {viz}, port: {viz_zmq_port}")
 
         # queue with received images
         image_queue = Queue(NETAPP_INPUT_QUEUE)
@@ -280,7 +285,7 @@ def command_callback_websocket(sid, data: Dict):
         # Create worker
         worker = CollisionWorker(
             image_queue, sio,
-            config, camera_config, fps,
+            config, camera_config, fps, viz, viz_zmq_port,
             name=f"Detector {eio_sid}",
             daemon=True
         )
@@ -334,11 +339,13 @@ def main(args=None):
     detector = YOLODetector.from_dict({})
     del detector
 
-    # runs the flask server
-    # allow_unsafe_werkzeug needs to be true to run inside the docker
-    # TODO: use better webserver
-    app.run(port=NETAPP_PORT, host='0.0.0.0')
-
+    try:
+        # runs the flask server
+        # allow_unsafe_werkzeug needs to be true to run inside the docker
+        # TODO: use better webserver
+        app.run(port=NETAPP_PORT, host='0.0.0.0')
+    except KeyboardInterrupt:
+        logger.info("Terminating ...")
 
 if __name__ == '__main__':
     main()

@@ -33,57 +33,20 @@ class Worker(CollisionWorker):
         **kw
     ):
         super().__init__(
-            image_queue,
-            None,
-            config,
-            camera_config,
-            fps,
+            image_queue=image_queue,
+            sio=None,
+            config=config,
+            camera_config=camera_config,
+            fps=fps,
+            viz=False,
             **kw
         )
         self.publisher = publisher
 
-    def publish_results(self, tracked_objects, metadata):
-        """
-        Publishes the results to the robot
-
-        Args:
-            tracked_objects (_type_): The results of the detection.
-            metadata (_type_): NetApp-specific metadata related to processed image.
-        """
-        # Get list of current offenses
-        dangerous_objects = self.guard.dangerous_objects()
-        dangerous_detections = dict()
-
-        object_statuses = list(self.guard.label_objects(include_distant=False))
-
-        if tracked_objects is not None:
-            for tid, t in tracked_objects.items():
-                x1, y1, x2, y2 = t.get_state()[0]
-                det = dict()
-                det["bbox"] = [x1, y1, x2, y2]
-                det["dangerous_distance"] = 0
-
-                if tid in dangerous_objects.keys():
-                    dist = Point(dangerous_objects[tid].location).distance(self.guard.vehicle_zone)
-                    det["dangerous_distance"] = dist
-                dangerous_detections[tid] = det
-
-            for object_status in object_statuses:
-                object_status.location = object_status.location.coords[0]
-                object_status.path = [pts for pts in object_status.path.coords]
-            object_statuses = [asdict(object_status) for object_status in object_statuses]
-
-            # TODO:check timestamp exists
-            result = {"timestamp": metadata["timestamp"],
-                      "recv_timestamp": metadata["recv_timestamp"],
-                      "timestamp_before_process": metadata["timestamp_before_process"],
-                      "timestamp_after_process": metadata["timestamp_after_process"],
-                      "send_timestamp": time.perf_counter_ns(),
-                      "dangerous_detections": dangerous_detections,
-                      "objects": object_statuses}
-            results = String()
-            results.data = json.dumps(result)
-            self.publisher.publish(results)
+    def publish_results(self, results, metadata):
+        msg = String()
+        msg.data = json.dumps(results)
+        self.publisher.publish(msg)
 
 
 def parameters_to_dict(parameters: Dict):

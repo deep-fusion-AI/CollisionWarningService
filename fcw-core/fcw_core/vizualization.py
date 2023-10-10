@@ -175,19 +175,19 @@ def tracking_info(
     )
 
     caution_color = (255, 255, 0) if caution_status else (64, 64, 64)
-    draw.text((160, 0), "CAUTION", fill=caution_color, font=_font, align="left")
+    draw.text((100, 0), "CAUTION", fill=caution_color, font=_font, align="left")
 
     warning_color = (255, 255, 0) if warning_status else (64, 64, 64)
-    draw.text((260, 0), "WARNING", fill=warning_color, font=_font, align="left")
+    draw.text((180, 0), "WARNING", fill=warning_color, font=_font, align="left")
 
     danger_color = (255, 0, 0) if danger_status else (64, 64, 64)
-    draw.text((360, 0), "DANGER", fill=danger_color, font=_font, align="left")
+    draw.text((260, 0), "DANGER", fill=danger_color, font=_font, align="left")
 
     if danger_status:
         ttc = min(
             s.time_to_collision for s in object_status if s.time_to_collision is not None
         )
-        draw.text((460, 0), f"ttc = {ttc:0.1f} s", fill=(255, 0, 0), font=_font, align="left")
+        draw.text((320, 0), f"ttc = {ttc:0.1f} s", fill=(255, 0, 0), font=_font, align="left")
 
     return image
 

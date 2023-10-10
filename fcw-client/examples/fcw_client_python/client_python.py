@@ -21,14 +21,14 @@ logger = logging.getLogger("FCW client python")
 # Testing video file
 TEST_VIDEO_FILE = str("../../../videos/video3.mp4")
 # TEST_VIDEO_FILE = str("rtsp://127.0.0.1:8554/webcam.h264")
-# TEST_VIDEO_FILE = str("../../../videos/bringauto_2023-03-20.mp4")
+#TEST_VIDEO_FILE = str("../../../videos/bringauto_2023-03-20_short.mp4")
 
 # Testing configuration of the algorithm
 CONFIG_FILE = Path("../../../config/config.yaml")
 
 # Testing camera settings - specific for the particular input
 CAMERA_CONFIG_FILE = Path("../../../videos/video3.yaml")
-# CAMERA_CONFIG_FILE = Path("../../../videos/bringauto.yaml")
+#CAMERA_CONFIG_FILE = Path("../../../videos/bringauto.yaml")
 
 # topped flag for SIGTERM handler (stopping video frames sending)
 stopped = False

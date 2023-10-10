@@ -144,6 +144,8 @@ class CollisionWarningClient:
         camera_config: Path,
         netapp_address: str = NETAPP_ADDRESS,
         fps: float = 30,
+        viz: bool = True,
+        viz_zmq_port: int = 5558,
         results_callback: Optional[Callable] = None,
         stream_type: Optional[StreamType] = StreamType.H264,
         out_csv_dir: Optional[str] = None,
@@ -195,13 +197,14 @@ class CollisionWarningClient:
                 self.client.register(
                     netapp_address,
                     args={"h264": True, "config": self.config_dict, "camera_config": self.camera_config_dict,
-                          "fps": self.fps,
+                          "fps": self.fps, "viz": viz, "viz_zmq_port": viz_zmq_port,
                           "width": width, "height": height}
                 )
             elif self.stream_type is StreamType.JPEG:
                 self.client.register(
                     netapp_address,
-                    args={"config": self.config_dict, "camera_config": self.camera_config_dict, "fps": self.fps}
+                    args={"config": self.config_dict, "camera_config": self.camera_config_dict,
+                          "fps": self.fps, "viz": viz, "viz_zmq_port": viz_zmq_port}
                 )
             else:
                 raise Exception("Unknown stream type")
