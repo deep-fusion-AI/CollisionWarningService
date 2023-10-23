@@ -1,3 +1,4 @@
+#FROM bluenviron/mediamtx:latest-ffmpeg
 FROM python:3.8-slim
 
 RUN DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends tzdata
@@ -47,9 +48,15 @@ RUN cp -r yolov5/* /root/.cache/torch/hub/ultralytics_yolov5_master
 ENTRYPOINT ["/root/fcw_service_start.sh"]
 
 COPY docker/fcw_service_start.sh /root/fcw_service_start.sh
+COPY data/ /root/data
+
+#COPY --from=0 /mediamtx /root/mediamtx
+#COPY docker/mediamtx.yml /root/mediamtx.yml
 
 RUN chmod +x /root/fcw_service_start.sh
 
 ENV NETAPP_PORT=5896
     
 EXPOSE 5896
+#EXPOSE 8554
+EXPOSE 5558

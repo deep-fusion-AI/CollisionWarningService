@@ -330,7 +330,7 @@ def disconnect_results(sid):
 
 
 def main(args=None):
-    parser = argparse.ArgumentParser(description='Standalone variant of Forward Collision Warning NetApp')
+    parser = argparse.ArgumentParser(description='Forward Collision Warning Service')
     args = parser.parse_args()
 
     logger.info(f"The size of the queue set to: {NETAPP_INPUT_QUEUE}")
@@ -346,6 +346,7 @@ def main(args=None):
         app.run(port=NETAPP_PORT, host='0.0.0.0')
     except KeyboardInterrupt:
         logger.info("Terminating ...")
+
 
 if __name__ == '__main__':
     main()

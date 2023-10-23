@@ -2,6 +2,8 @@
   ros__parameters:
     # This is an example of FCW algorithm configuration
     config:
+      fps: 25
+      visualization: False
       # Configuration of detector
       detector:
         model: yolov5m6

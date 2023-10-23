@@ -29,7 +29,9 @@ class Worker(CollisionWorker):
         publisher: Publisher,
         config: dict,
         camera_config: dict,
-        fps: float = 30,
+        fps: float,
+        viz: bool,
+        viz_zmq_port: int,
         **kw
     ):
         super().__init__(
@@ -38,7 +40,8 @@ class Worker(CollisionWorker):
             config=config,
             camera_config=camera_config,
             fps=fps,
-            viz=False,
+            viz=viz,
+            viz_zmq_port=viz_zmq_port,
             **kw
         )
         self.publisher = publisher
@@ -100,6 +103,9 @@ class FCWServiceNode(rclpy.node.Node):
             self.publisher,
             self.config_dict,
             self.camera_config_dict,
+            fps=self.config_dict.get("fps", 30),
+            viz=self.config_dict.get("visualization", False),
+            viz_zmq_port=self.config_dict.get("viz_zmq_port", 5558),
             daemon=True
         )
         self.worker.start()

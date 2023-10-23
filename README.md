@@ -37,7 +37,7 @@ System packages:
 
 Run FCW service in docker:
 ```bash
-docker run -p 5896:5896 --gpus all but5gera/fcw_service:0.6.2 
+docker run -p 5896:5896 --gpus all but5gera/fcw_service:0.7.0 
 ```
 Donwload sample files:\
 https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/video3.mp4 \
@@ -46,7 +46,7 @@ https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/con
 
 Install minimal client package:
 ```bash
-python -m venv myvenv
+python3 -m venv myvenv
 myvenv\Scripts\activate
 pip install fcw-client
 ```
@@ -59,7 +59,7 @@ fcw_client_python_simple -c config.yaml --camera video3.yaml video3.mp4
 
 Create python virtual environment, e.g.:
 ```bash
-python -m venv myvenv
+python3 -m venv myvenv
 myvenv\Scripts\activate
 ```
 and install fcw packages:
@@ -103,19 +103,21 @@ The image can be built:
 ```bash
 cd ..
 cd fcw-core/docker 
-docker build -f fcw_service.Dockerfile -t but5gera/fcw_service:0.6.2 . 
+docker build -f fcw_service.Dockerfile -t but5gera/fcw_service:0.7.0 . 
 ```
 or the image directly from the Docker Hub can be used.
  
 The startup can be like this, where the GPU of the host computer is used and 
-TCP port 5896 is mapped to the host network.
+TCP ports 5896 and 8554 are mapped to the host network.
+The port 8554 is RTSP port used for remote visualization.
+
 ```bash
-docker run -p 5896:5896 --network host --gpus all but5gera/fcw_service:0.6.2 
+docker run -p 5896:5896 -p 8554:8554 --network host --gpus all but5gera/fcw_service:0.7.0 
 ```
 
 #### Local startup
 
-The FCW service can also be started locally using [fcw/service/interface.py](fcw/service/interface.py), 
+The FCW service can also be started locally using [fcw-service/interface.py](fcw/service/interface.py), 
 but the fcw-service package must be installed and the NETAPP_PORT environment 
 variable should be set (default is 5896).
 Run FCW service in same virtual environment as standalone example:
@@ -143,6 +145,37 @@ or run advanced client:
 
 ```bash
 fcw_client_python -c config/config.yaml --camera videos/video3.yaml videos/video3.mp4
+```
+
+## Running remote visualization
+
+The visualisation should be enabled with config arguments during initialization command (`CollisionWorker` created 
+with `viz` parameter set to `True` (ZeroMQ port can be also configured)).
+
+If the FCW service has been started, **run RTSP server first**, e.g. https://github.com/bluenviron/mediamtx
+on address: rtsp://localhost:8554 (TCP port 8554) and then:
+
+```bash
+docker run --rm -it -p 8554:8554 -e MTX_PROTOCOLS=tcp bluenviron/mediamtx:latest-ffmpeg
+```
+
+In other terminal run
+
+```bash
+cd fcw-service/fcw_service
+fcw_visualization
+```
+
+or executing 
+```bash
+cd fcw-service/fcw_service
+python3 visualization.py
+```
+
+You can view video, e.g. (localhost can be replaced with server address):
+
+```bash
+ffplay rtsp://localhost:8554/video
 ```
 
 ## Running with your videos

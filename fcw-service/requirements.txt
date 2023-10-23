@@ -3,5 +3,6 @@ opencv-python
 simple-websocket
 python-socketio
 flask
+pyzmq
 fcw-core-utils
 fcw-core
