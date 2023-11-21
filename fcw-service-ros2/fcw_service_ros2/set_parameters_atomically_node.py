@@ -16,7 +16,7 @@ class SetParametersAtomicallyNode(Node):
         self.future = None
         self.client = self.create_client(SetParametersAtomically, service_name)
         while not self.client.wait_for_service(timeout_sec=1.0):
-            self.get_logger().info('service not available, waiting again...')
+            self.get_logger().info('service not available, waiting again ...')
         self.req = SetParametersAtomically.Request()
         print(self.get_parameters_by_prefix(""))
 

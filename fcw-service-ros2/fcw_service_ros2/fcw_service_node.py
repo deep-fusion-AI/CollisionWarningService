@@ -1,7 +1,5 @@
 import json
 import os
-import time
-from dataclasses import asdict
 from queue import Queue
 from typing import List
 
@@ -10,8 +8,9 @@ from rcl_interfaces.msg import SetParametersResult
 from rclpy.node import Publisher
 from rclpy.time import Time
 from std_msgs.msg import String
+from sensor_msgs.msg import Image
 
-from era_5g_interface.ros2_numpy_image import *
+from fcw_service_ros2.ros2_numpy_image import *
 from era_5g_interface.task_handler_internal_q import TaskHandlerInternalQ, QueueFullAction
 from fcw_core_utils.collision import *
 from fcw_service.collision_worker import CollisionWorker
@@ -23,36 +22,52 @@ NETAPP_INPUT_QUEUE = int(os.getenv("NETAPP_INPUT_QUEUE", 1))
 
 
 class Worker(CollisionWorker):
+    """Worker class."""
+
     def __init__(
         self,
         image_queue: Queue,
         publisher: Publisher,
-        config: dict,
-        camera_config: dict,
+        config: Dict,
+        camera_config: Dict,
         fps: float,
         viz: bool,
         viz_zmq_port: int,
-        **kw
-    ):
+        **kw,
+    ) -> None:
         super().__init__(
             image_queue=image_queue,
-            sio=None,
+            send_function=self.publish_results,
             config=config,
             camera_config=camera_config,
             fps=fps,
             viz=viz,
             viz_zmq_port=viz_zmq_port,
-            **kw
+            **kw,
         )
         self.publisher = publisher
 
-    def publish_results(self, results, metadata):
+    def publish_results(self, results) -> None:
+        """Publish results to ROS 2 topic.
+
+        Args:
+            results ():
+        """
+
         msg = String()
         msg.data = json.dumps(results)
         self.publisher.publish(msg)
 
 
-def parameters_to_dict(parameters: Dict):
+def parameters_to_dict(parameters: Dict) -> Dict:
+    """Convert ROS parameters dict into new dict.
+
+    Args:
+        parameters (Dict): ROS parameters dict
+
+    Returns:
+        New simple form of parameters dict used in FCW worker.
+    """
     parameters_dict = {}
     for name, value in parameters.items():
         keys = name.split(".")
@@ -67,10 +82,17 @@ def parameters_to_dict(parameters: Dict):
 
 
 class FCWServiceNode(rclpy.node.Node):
-    def __init__(self):
-        super().__init__('fcw_service_node', automatically_declare_parameters_from_overrides=True)
+    """FCW Service ROS 2 Node."""
 
+    def __init__(self) -> None:
+        """Constructor."""
+
+        super().__init__("fcw_service_node", automatically_declare_parameters_from_overrides=True)
+
+        # Set ROS 2 parameter callback.
         self.add_on_set_parameters_callback(self.parameter_callback)
+
+        # This get parameters which are set through command line arguments.
         self.config_dict = parameters_to_dict(self.get_parameters_by_prefix("config"))
         self.camera_config_dict = parameters_to_dict(self.get_parameters_by_prefix("camera_config"))
         print(self.config_dict)
@@ -79,25 +101,26 @@ class FCWServiceNode(rclpy.node.Node):
         self.publisher = self.create_publisher(String, OUTPUT_TOPIC, 10)
         self.subscriber = self.create_subscription(Image, INPUT_TOPIC, self.image_callback, 10)
 
-        # queue with received images
+        # Queue with received images.
         self.image_queue = Queue(NETAPP_INPUT_QUEUE)
         self.task_handler = None
         self.worker = None
+        # Start worker only with camera config.
         if self.camera_config_dict:
             self.start()
 
-    def start(self):
+    def start(self) -> None:
+        """Start worker, delete old worker."""
+
         if self.task_handler:
             del self.task_handler
         if self.worker:
             del self.worker
 
         self.image_queue.queue.clear()
-        self.task_handler = TaskHandlerInternalQ(
-            "fcw_service_task_handler", self.image_queue, if_queue_full=QueueFullAction.DISCARD_OLDEST
-        )
+        self.task_handler = TaskHandlerInternalQ(self.image_queue, if_queue_full=QueueFullAction.DISCARD_OLDEST)
 
-        # Create worker
+        # Create new worker.
         self.worker = Worker(
             self.image_queue,
             self.publisher,
@@ -106,17 +129,28 @@ class FCWServiceNode(rclpy.node.Node):
             fps=self.config_dict.get("fps", 30),
             viz=self.config_dict.get("visualization", False),
             viz_zmq_port=self.config_dict.get("viz_zmq_port", 5558),
-            daemon=True
+            daemon=True,
         )
+        # Start worker.
         self.worker.start()
 
-    def parameter_callback(self, parameters: List[rclpy.Parameter]):
+    def parameter_callback(self, parameters: List[rclpy.Parameter]) -> SetParametersResult:
+        """Parameter callback - ROS 2 parameter service used for FCW parameters. Starts new Worker with new parameters.
+
+        Args:
+            parameters (List[rclpy.Parameter]): FCW parameters.
+
+        Returns:
+            SetParametersResult
+        """
         try:
             print(parameters)
+
             parameters_dict = {}
             for parameter in parameters:
                 parameters_dict[parameter.name] = parameter
                 print(f"{parameter.name} {parameter.value}")
+
             parameters_dict = parameters_to_dict(parameters_dict)
 
             self.config_dict = parameters_dict.get("config", self.config_dict)
@@ -124,24 +158,33 @@ class FCWServiceNode(rclpy.node.Node):
             print(self.config_dict)
             print(self.camera_config_dict)
 
+            # Start worker only with camera config.
             if self.camera_config_dict:
                 self.start()
-        except Exception as e:
-            self.get_logger().error(f"Parameter callback exception: {repr(e)}")
+        except Exception as ex:
+            self.get_logger().error(f"Parameter callback exception: {repr(ex)}")
             return SetParametersResult(successful=False)
 
         return SetParametersResult(successful=True)
 
-    def image_callback(self, msg: Image):
+    def image_callback(self, image: Image) -> None:
+        """Image callback.
+
+        Args:
+            image (Image): Image.
+        """
+
         try:
-            # Convert the ROS image message to numpy format
-            np_image = image_to_numpy(msg)
+            # Convert the ROS image message to numpy format.
+            np_image = image_to_numpy(image)
         except TypeError as e:
             self.get_logger().error(f"Can't convert image to numpy. {e}")
             return
         if np_image is not None:
-            metadata = {"timestamp": Time.from_msg(msg.header.stamp).nanoseconds,
-                        "recv_timestamp": self.get_clock().now().nanoseconds}
+            metadata = {
+                "timestamp": Time.from_msg(image.header.stamp).nanoseconds,
+                "recv_timestamp": self.get_clock().now().nanoseconds,
+            }
             if self.task_handler is not None:
                 self.task_handler.store_data(metadata, np_image)
             else:
@@ -152,17 +195,18 @@ class FCWServiceNode(rclpy.node.Node):
 
 def main(args=None) -> None:
     """Main function."""
+
     rclpy.init(args=args)
     node = FCWServiceNode()
 
     try:
-        # Spin until interrupted
+        # Spin until interrupted.
         while rclpy.ok():
             rclpy.spin_once(node, timeout_sec=1.0)
     except KeyboardInterrupt:
         pass
     except BaseException:
-        print('Exception in node:', file=sys.stderr)
+        print("Exception in node:", file=sys.stderr)
         raise
     finally:
         node.destroy_node()

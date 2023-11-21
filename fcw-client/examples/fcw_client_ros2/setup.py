@@ -15,7 +15,7 @@ setup(
     zip_safe=True,
     maintainer='Petr Kleparnik',
     maintainer_email='p.kleparnik@cognitechna.cz',
-    description='Collision Warning Service client',
+    description='Early collision warning Network Application for Transportation use case - ROS 2 client',
     license='TODO: License declaration',
     tests_require=['pytest'],
     entry_points={

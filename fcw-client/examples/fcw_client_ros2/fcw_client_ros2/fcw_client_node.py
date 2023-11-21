@@ -1,6 +1,6 @@
 import sys
 from pathlib import Path
-from typing import Union
+from typing import Union, Dict
 
 import cv2
 import rclpy
@@ -16,13 +16,19 @@ publisher: Union[Publisher, None] = None
 
 bridge = CvBridge()
 
-# Configuration of the algorithm
+# Configuration of the algorithm.
 config = Path("../../config/config.yaml")
-# Camera settings - specific for the particular input
+# Camera settings - specific for the particular input.
 camera_config = Path("../../videos/video3.yaml")
 
 
-def results_callback(data: dict):
+def results_callback(data: Dict) -> None:
+    """Results callback.
+
+    Args:
+        data (dict): Results data.
+    """
+
     global publisher
     msg = String()
     print(data)
@@ -30,13 +36,19 @@ def results_callback(data: dict):
     publisher.publish(msg)
 
 
-def send_image_callback(image: Image):
-    # convert received image to opencv
-    cv_image = bridge.imgmsg_to_cv2(image, desired_encoding='passthrough')
-    # color correction
+def send_image_callback(image: Image) -> None:
+    """Send image callback.
+
+    Args:
+        image (Image): Image.
+    """
+
+    # Convert received image to opencv
+    cv_image = bridge.imgmsg_to_cv2(image, desired_encoding="passthrough")
+    # Color correction.
     image_bgr = cv2.cvtColor(cv_image, cv2.COLOR_RGB2BGR)
     global collision_warning_client
-    # or use the HTTP transport to the /image endpoint
+    # Send image.
     collision_warning_client.send_image(image_bgr, image.header.stamp.nanosec)
 
 
@@ -45,7 +57,7 @@ def main(args=None) -> None:
 
     rclpy.init(args=args)
 
-    node = rclpy.create_node('client_ros2')
+    node = rclpy.create_node("client_ros2")
     global collision_warning_client, publisher
 
     publisher = node.create_publisher(String, "/results", 10)
@@ -59,7 +71,7 @@ def main(args=None) -> None:
     except KeyboardInterrupt:
         pass
     except BaseException:
-        print('Exception in node:', file=sys.stderr)
+        print("Exception in node:", file=sys.stderr)
         raise
     finally:
         node.destroy_node()

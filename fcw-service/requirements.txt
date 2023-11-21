@@ -1,4 +1,5 @@
 era_5g_interface
+era_5g_server
 opencv-python
 simple-websocket
 python-socketio

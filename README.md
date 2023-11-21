@@ -94,7 +94,7 @@ Relevant configurations are in `videos/video3.yaml` - camera config, and `config
 
 ## Network Application for 5G-ERA
 
-### Run FCW service/NetApp
+### Run FCW service / 5G-ERA Network Application
 
 #### Run in Docker
 

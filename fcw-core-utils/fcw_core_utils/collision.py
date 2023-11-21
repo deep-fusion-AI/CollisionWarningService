@@ -12,14 +12,17 @@ from fcw_core_utils.geometry import *
 
 
 def F_matrix(dt):
-    dt2 = 0.5 * dt ** 2
+    dt2 = 0.5 * dt**2
     return np.array(
-        [[1, dt, dt2, 0, 0, 0],
-         [0, 1, dt, 0, 0, 0],
-         [0, 0, 1, 0, 0, 0],
-         [0, 0, 0, 1, dt, dt2],
-         [0, 0, 0, 0, 1, dt],
-         [0, 0, 0, 0, 0, 1]], dtype=np.float32
+        [
+            [1, dt, dt2, 0, 0, 0],
+            [0, 1, dt, 0, 0, 0],
+            [0, 0, 1, 0, 0, 0],
+            [0, 0, 0, 1, dt, dt2],
+            [0, 0, 0, 0, 1, dt],
+            [0, 0, 0, 0, 0, 1],
+        ],
+        dtype=np.float32,
     )
 
 
@@ -27,15 +30,12 @@ def object_tracker(x_init, dt: float = 1):
     kf = KalmanFilter(dim_x=6, dim_z=2)
     kf.F = F_matrix(dt)
 
-    kf.H = np.array(
-        [[1, 0, 0, 0, 0, 0],
-         [0, 0, 0, 1, 0, 0]]
-    )  # Measurement function
+    kf.H = np.array([[1, 0, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0]])  # Measurement function
 
     kf.P = np.diag([1, 2, 400, 1, 2, 400]) * 10
     z_std = 2
-    kf.R = np.diag([z_std ** 2, z_std ** 2])  # 1 standard
-    kf.Q = Q_discrete_white_noise(dim=3, dt=dt, var=0.5e-1 ** 2, block_size=2)  # process uncertainty
+    kf.R = np.diag([z_std**2, z_std**2])  # 1 standard
+    kf.Q = Q_discrete_white_noise(dim=3, dt=dt, var=0.5e-1**2, block_size=2)  # process uncertainty
     kf._alpha_sq = 1
     x, y = x_init
     kf.x[0] = x
@@ -56,7 +56,7 @@ class PointWorldObject:
     """
     Simplest abstraction of world objects - just a location
 
-    One can implement 
+    One can implement
     """
 
     def __init__(self, xyz: np.ndarray, dt: float):
@@ -83,7 +83,8 @@ class PointWorldObject:
 
     @property
     def relative_speed(self):
-        if self.vxvy is None: return 0
+        if self.vxvy is None:
+            return 0
         return np.linalg.norm(self.vxvy)
 
     def future_path(self, length: float = 1, dt: float = 0.1):
@@ -99,16 +100,16 @@ class PointWorldObject:
         return LineString(xy.T)
 
 
-def get_reference_points(trackers: dict, camera: Camera, *, is_rectified: bool):
+def get_reference_points(trackers: Dict, camera: Camera, *, is_rectified: bool):
     """
     Convert 2D observation to 3D
     """
-    if not trackers: return dict()
+    if not trackers:
+        return dict()
 
     # (xyxy) -> (rx,ry)
     R = np.array(
-        [[0.5, 0, 0.5, 0],
-         [0, 0, 0, 1]],
+        [[0.5, 0, 0.5, 0], [0, 0, 0, 1]],
     )
     # image space bounding boxes of objects
     bb = np.vstack([tracker.get_state() for tracker in trackers.values()]).T
@@ -170,7 +171,7 @@ class ForwardCollisionGuard:
             prediction_step=d.get("prediction_step", 0.1),
         )
 
-    def update(self, ref_points: dict):
+    def update(self, ref_points: Dict):
         """
         Update state of objects tracked in world space
         """
@@ -192,10 +193,10 @@ class ForwardCollisionGuard:
         Check future paths of objects and filter dangerous ones
         """
         return {
-            tid: obj for tid, obj in self.objects.items()
-            if obj.distance < self.safety_radius and obj.future_path(
-                self.prediction_length, self.prediction_step
-            ).intersects(self.danger_zone)
+            tid: obj
+            for tid, obj in self.objects.items()
+            if obj.distance < self.safety_radius
+            and obj.future_path(self.prediction_length, self.prediction_step).intersects(self.danger_zone)
         }
 
     def label_objects(

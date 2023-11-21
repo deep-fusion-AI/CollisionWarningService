@@ -15,9 +15,11 @@
     You should have received a copy of the GNU General Public License
     along with this program.  If not, see <http://www.gnu.org/licenses/>.
 """
+from typing import Dict
 
 # import os
 import numpy as np
+
 # import matplotlib
 # import matplotlib.pyplot as plt
 # import matplotlib.patches as patches
@@ -32,10 +34,12 @@ from filterpy.kalman import KalmanFilter
 def linear_assignment(cost_matrix):
     try:
         import lap
+
         _, x, y = lap.lapjv(cost_matrix, extend_cost=True)
         return np.array([[y[i], i] for i in x if i >= 0])  #
     except ImportError:
         from scipy.optimize import linear_sum_assignment
+
         x, y = linear_sum_assignment(cost_matrix)
         return np.array(list(zip(x, y)))
 
@@ -51,11 +55,14 @@ def iou_batch(bb_test, bb_gt):
     yy1 = np.maximum(bb_test[..., 1], bb_gt[..., 1])
     xx2 = np.minimum(bb_test[..., 2], bb_gt[..., 2])
     yy2 = np.minimum(bb_test[..., 3], bb_gt[..., 3])
-    w = np.maximum(0., xx2 - xx1)
-    h = np.maximum(0., yy2 - yy1)
+    w = np.maximum(0.0, xx2 - xx1)
+    h = np.maximum(0.0, yy2 - yy1)
     wh = w * h
-    o = wh / ((bb_test[..., 2] - bb_test[..., 0]) * (bb_test[..., 3] - bb_test[..., 1])
-              + (bb_gt[..., 2] - bb_gt[..., 0]) * (bb_gt[..., 3] - bb_gt[..., 1]) - wh)
+    o = wh / (
+        (bb_test[..., 2] - bb_test[..., 0]) * (bb_test[..., 3] - bb_test[..., 1])
+        + (bb_gt[..., 2] - bb_gt[..., 0]) * (bb_gt[..., 3] - bb_gt[..., 1])
+        - wh
+    )
     return o
 
 
@@ -67,8 +74,8 @@ def convert_bbox_to_z(bbox):
     """
     w = bbox[2] - bbox[0]
     h = bbox[3] - bbox[1]
-    x = bbox[0] + w / 2.
-    y = bbox[1] + h / 2.
+    x = bbox[0] + w / 2.0
+    y = bbox[1] + h / 2.0
     s = w * h  # scale is just area
     r = w / float(h)
     return np.array([x, y, s, r]).reshape((4, 1))
@@ -82,15 +89,16 @@ def convert_x_to_bbox(x, score=None):
     w = np.sqrt(x[2] * x[3])
     h = x[2] / w
     if score is None:
-        return np.array([x[0] - w / 2., x[1] - h / 2., x[0] + w / 2., x[1] + h / 2.]).reshape((1, 4))
+        return np.array([x[0] - w / 2.0, x[1] - h / 2.0, x[0] + w / 2.0, x[1] + h / 2.0]).reshape((1, 4))
     else:
-        return np.array([x[0] - w / 2., x[1] - h / 2., x[0] + w / 2., x[1] + h / 2., score]).reshape((1, 6))
+        return np.array([x[0] - w / 2.0, x[1] - h / 2.0, x[0] + w / 2.0, x[1] + h / 2.0, score]).reshape((1, 6))
 
 
 class KalmanBoxTracker(object):
     """
     This class represents the internal state of individual tracked objects observed as bbox.
     """
+
     count = 0
 
     def __init__(self, bbox, dt: float):
@@ -100,8 +108,15 @@ class KalmanBoxTracker(object):
         # define constant velocity model
         self.kf = KalmanFilter(dim_x=7, dim_z=4)
         self.kf.F = np.array(
-            [[1, 0, 0, 0, dt, 0, 0], [0, 1, 0, 0, 0, dt, 0], [0, 0, 1, 0, 0, 0, dt], [0, 0, 0, 1, 0, 0, 0],
-             [0, 0, 0, 0, 1, 0, 0], [0, 0, 0, 0, 0, 1, 0], [0, 0, 0, 0, 0, 0, 1]]
+            [
+                [1, 0, 0, 0, dt, 0, 0],
+                [0, 1, 0, 0, 0, dt, 0],
+                [0, 0, 1, 0, 0, 0, dt],
+                [0, 0, 0, 1, 0, 0, 0],
+                [0, 0, 0, 0, 1, 0, 0],
+                [0, 0, 0, 0, 0, 1, 0],
+                [0, 0, 0, 0, 0, 0, 1],
+            ]
         )
         self.kf.H = np.array(
             [[1, 0, 0, 0, 0, 0, 0], [0, 1, 0, 0, 0, 0, 0], [0, 0, 1, 0, 0, 0, 0], [0, 0, 0, 1, 0, 0, 0]]
@@ -110,7 +125,7 @@ class KalmanBoxTracker(object):
         # 4x4 xysr
         self.kf.R = np.diag([1, 1, 5, 5]) * 0.1
         # 7x7 x,y,s,r,dx,dy,ds
-        self.kf.P[4:, 4:] *= 100.  # give high uncertainty to the unobservable initial velocities
+        self.kf.P[4:, 4:] *= 100.0  # give high uncertainty to the unobservable initial velocities
         self.kf.P *= 1
         # 7x7 noise
         self.kf.Q[-1, -1] *= 0.01
@@ -210,12 +225,12 @@ class Sort:
         self.max_age = max_age
         self.min_hits = min_hits
         self.iou_threshold = iou_threshold
-        self.trackers = []
+        self.trackers: list[KalmanBoxTracker] = []
         self.frame_count = 0
         self.dt = dt
 
     @staticmethod
-    def from_dict(d: dict):
+    def from_dict(d: Dict):
         return Sort(
             max_age=d.get("max_age", 1),
             min_hits=d.get("min_hits", 3),
@@ -269,17 +284,18 @@ class Sort:
             return np.concatenate(ret)
         return np.empty((0, 6))
 
+
 # def parse_args():
 #     """Parse input arguments."""
 #     parser = argparse.ArgumentParser(description='SORT demo')
 #     parser.add_argument('--display', dest='display', help='Display online tracker output (slow) [False]',action='store_true')
 #     parser.add_argument("--seq_path", help="Path to detections.", type=str, default='data')
 #     parser.add_argument("--phase", help="Subdirectory in seq_path.", type=str, default='train')
-#     parser.add_argument("--max_age", 
-#                         help="Maximum number of frames to keep alive a track without associated detections.", 
+#     parser.add_argument("--max_age",
+#                         help="Maximum number of frames to keep alive a track without associated detections.",
 #                         type=int, default=1)
-#     parser.add_argument("--min_hits", 
-#                         help="Minimum number of associated detections before track is initialised.", 
+#     parser.add_argument("--min_hits",
+#                         help="Minimum number of associated detections before track is initialised.",
 #                         type=int, default=3)
 #     parser.add_argument("--iou_threshold", help="Minimum IOU for match.", type=float, default=0.3)
 #     args = parser.parse_args()
@@ -305,7 +321,7 @@ class Sort:
 #     os.makedirs('output')
 #   pattern = os.path.join(args.seq_path, phase, '*', 'det', 'det.txt')
 #   for seq_detections_fn in glob.glob(pattern):
-#     mot_tracker = Sort(max_age=args.max_age, 
+#     mot_tracker = Sort(max_age=args.max_age,
 #                        min_hits=args.min_hits,
 #                        iou_threshold=args.iou_threshold) #create instance of the SORT tracker
 #     seq_detections = np.loadtxt(seq_detections_fn, delimiter=',')

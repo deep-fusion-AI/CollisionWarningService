@@ -10,7 +10,7 @@ List of available classes can be found here:
 https://github.com/ultralytics/yolov5/blob/master/data/coco128.yaml
 """
 
-from typing import Iterable
+from typing import Iterable, Dict
 
 import cv2
 import numpy as np
@@ -18,15 +18,14 @@ import torch
 from shapely.geometry import box
 import gc
 import logging
+
 logger = logging.getLogger(__name__)
 
 from fcw_core.detection import ObjectObservation
 
 
 class YOLODetector:
-    default_classes = [
-        "person", "bicycle", "car", "motorcycle", "bus", "truck"
-    ]
+    default_classes = ["person", "bicycle", "car", "motorcycle", "bus", "truck"]
 
     def __init__(
         self,
@@ -35,19 +34,20 @@ class YOLODetector:
         max_size: int = 640,
         min_score: float = 0.3,
         filter_in_frame: bool = True,
-        min_area: float = None
+        min_area: float = None,
     ):
         self.model = torch.hub.load("ultralytics/yolov5", model, pretrained=True, trust_repo=True)
         self.model.agnostic = False
         self.model.iou = 0.7
         classes = classes or YOLODetector.default_classes
         if classes is not None:
-            # Init detected classes 
+            # Init detected classes
             # Inverted name index: name -> class_id
             name_idx = dict(((name, class_id) for class_id, name in self.model.names.items()))
             # List class_id specified by names in classes passed as parameter, ignoring unknown classes
-            self.model.classes = [name_idx[nm] for nm in classes if
-                                  nm in name_idx] or None  # ... or None - in case og empty list leave None value not empty list
+            self.model.classes = [
+                name_idx[nm] for nm in classes if nm in name_idx
+            ] or None  # ... or None - in case og empty list leave None value not empty list
         self.model.conf = min_score
         self.max_size = max_size
         self.filter_in_frame = filter_in_frame
@@ -68,7 +68,7 @@ class YOLODetector:
         logger.info(f"torch.cuda.memory_cached(): {torch.cuda.memory_reserved() / 1024 ** 2}")
 
     @staticmethod
-    def from_dict(d: dict) -> "YOLODetector":
+    def from_dict(d: Dict) -> "YOLODetector":
         return YOLODetector(
             model=d.get("model", "yolov5n6"),
             classes=d.get("classes"),

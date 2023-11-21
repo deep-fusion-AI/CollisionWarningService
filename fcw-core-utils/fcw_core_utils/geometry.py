@@ -1,5 +1,8 @@
+from typing import Dict
+
 import cv2
 import numpy as np
+
 # Fix horrible naming of OpenCV functions
 from cv2.fisheye import (
     estimateNewCameraMatrixForUndistortRectify as estimateCameraMatrix,
@@ -12,7 +15,7 @@ from shapely.geometry import LineString, Point
 
 
 def wpca(X, w):
-    """ Weighted PCA """
+    """Weighted PCA"""
     U, E, _ = np.linalg.svd(X.T @ np.diag(w) @ X)
     return U, E
 
@@ -96,7 +99,7 @@ class Camera:
         return y[0]
 
     @staticmethod
-    def from_dict(d: dict) -> "Camera":
+    def from_dict(d: Dict) -> "Camera":
         image_size = d["image_size"]
         rectified_size = d["rectified_size"]
         # Measured intrinsic matrix
@@ -146,12 +149,7 @@ def estimate_R(K, h, view_direction="x"):
     assert view_direction in {"x", "-x"}
     x1, y1, x2, y2 = h
     # Compose matrix with homogeneous points
-    h = np.array(
-        [
-            [x1, y1, 1],  # Point in X direction
-            [x2, y2, 1]  # Point elsewhere on the horizon
-        ]
-    ).T
+    h = np.array([[x1, y1, 1], [x2, y2, 1]]).T  # Point in X direction  # Point elsewhere on the horizon
 
     # Directions to the points
     H = (np.linalg.inv(K) @ h).T

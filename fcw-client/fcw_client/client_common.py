@@ -11,6 +11,7 @@ from typing import Any, Dict, Callable, Optional
 import numpy as np
 import yaml
 
+from era_5g_interface.channels import CallbackInfoClient, ChannelType
 from fcw_core_utils.geometry import Camera
 from era_5g_client.client_base import NetAppClientBase
 
@@ -21,7 +22,7 @@ image_storage: Dict[int, np.ndarray] = dict()
 DEBUG_PRINT_WARNING = True  # Prints score.
 DEBUG_PRINT_DELAY = True  # Prints the delay between capturing image and receiving the results.
 
-# URL of the FCW service
+# URL of the FCW service.
 NETAPP_ADDRESS = str(os.getenv("NETAPP_ADDRESS", "http://localhost:5896"))
 
 
@@ -39,12 +40,9 @@ class ResultsReader:
         self.delays = []
         self.delays_recv = []
         self.delays_send = []
-        self.timestamps = [
-            ["start_timestamp_ns",
-             "recv_timestamp_ns",
-             "send_timestamp_ns",
-             "end_timestamp_ns"]
-        ]
+        self.delays_process = []
+        self.timestamps = [["start_timestamp_ns", "recv_timestamp_ns", "send_timestamp_ns", "end_timestamp_ns",
+                            "timestamp_before_process", "timestamp_after_process"]]
         self.out_csv_dir = out_csv_dir
         self.out_prefix = out_prefix
 
@@ -61,27 +59,33 @@ class ResultsReader:
         else:
             logger.info(f"Send frames: {send_frames_count}, dropped frames: {send_frames_count - len(self.delays)}")
             logger.info(
-                f"Delay median: {statistics.median(self.delays) * 1.0e-9:.3f}s "
+                f"Delay median:                 {statistics.median(self.delays) * 1.0e-9:.3f}s "
                 f"mean: {statistics.mean(self.delays) * 1.0e-9:.3f}s "
                 f"min: {min(self.delays) * 1.0e-9:.3f}s "
                 f"max: {max(self.delays) * 1.0e-9:.3f}s"
             )
-            # logger.info(
-            #     f"Delay service recv median: {statistics.median(self.delays_recv) * 1.0e-9:.3f}s "
-            #     f"mean: {statistics.mean(self.delays_recv) * 1.0e-9:.3f}s "
-            #     f"min: {min(self.delays_recv) * 1.0e-9:.3f}s "
-            #     f"max: {max(self.delays_recv) * 1.0e-9:.3f}s"
-            # )
-            # logger.info(
-            #     f"Delay service send median: {statistics.median(self.delays_send) * 1.0e-9:.3f}s "
-            #     f"mean: {statistics.mean(self.delays_send) * 1.0e-9:.3f}s "
-            #     f"min: {min(self.delays_send) * 1.0e-9:.3f}s "
-            #     f"max: {max(self.delays_send) * 1.0e-9:.3f}s"
-            # )
+            logger.info(
+                f"Delay service recv median:    {statistics.median(self.delays_recv) * 1.0e-9:.3f}s "
+                f"mean: {statistics.mean(self.delays_recv) * 1.0e-9:.3f}s "
+                f"min: {min(self.delays_recv) * 1.0e-9:.3f}s "
+                f"max: {max(self.delays_recv) * 1.0e-9:.3f}s"
+            )
+            logger.info(
+                f"Delay service send median:    {statistics.median(self.delays_send) * 1.0e-9:.3f}s "
+                f"mean: {statistics.mean(self.delays_send) * 1.0e-9:.3f}s "
+                f"min: {min(self.delays_send) * 1.0e-9:.3f}s "
+                f"max: {max(self.delays_send) * 1.0e-9:.3f}s"
+            )
+            logger.info(
+                f"Delay service process median: {statistics.median(self.delays_process) * 1.0e-9:.3f}s "
+                f"mean: {statistics.mean(self.delays_process) * 1.0e-9:.3f}s "
+                f"min: {min(self.delays_process) * 1.0e-9:.3f}s "
+                f"max: {max(self.delays_process) * 1.0e-9:.3f}s"
+            )
             if self.out_csv_dir is not None:
-                out_csv_filename = f'{self.out_prefix}'
+                out_csv_filename = f"{self.out_prefix}"
                 out_csv_filepath = os.path.join(self.out_csv_dir, out_csv_filename + ".csv")
-                with open(out_csv_filepath, "w", newline='') as csv_file:
+                with open(out_csv_filepath, "w", newline="") as csv_file:
                     csv_writer = csv.writer(csv_file)
                     csv_writer.writerows(self.timestamps)
 
@@ -94,7 +98,7 @@ class ResultsReader:
 
         results_timestamp = time.perf_counter_ns()
 
-        # Process dangerous detections
+        # Process dangerous detections.
         if "dangerous_detections" in results:
             if DEBUG_PRINT_WARNING:
                 for tracked_id, detection in results["dangerous_detections"].items():
@@ -104,11 +108,13 @@ class ResultsReader:
         if "objects" in results:
             logger.info(f"objects {results['objects']}")
 
-        # Process timestamps
+        # Process timestamps.
         if "timestamp" in results:
             timestamp = results["timestamp"]
             recv_timestamp = results["recv_timestamp"]
             send_timestamp = results["send_timestamp"]
+            timestamp_before_process = results["timestamp_before_process"]
+            timestamp_after_process = results["timestamp_after_process"]
 
             if DEBUG_PRINT_DELAY:
                 logger.info(
@@ -119,18 +125,15 @@ class ResultsReader:
                 self.delays.append((results_timestamp - timestamp))
                 self.delays_recv.append((recv_timestamp - timestamp))
                 self.delays_send.append((send_timestamp - timestamp))
+                self.delays_process.append((timestamp_after_process - timestamp_before_process))
 
-            self.timestamps.append(
-                [
-                    timestamp,
-                    recv_timestamp,
-                    send_timestamp,
-                    results_timestamp
-                ]
-            )
+            self.timestamps.append([timestamp, recv_timestamp, send_timestamp, results_timestamp,
+                                    timestamp_before_process, timestamp_after_process])
 
 
 class StreamType(Enum):
+    """Class for stream types."""
+
     JPEG = 1
     H264 = 2
 
@@ -156,11 +159,10 @@ class CollisionWarningClient:
         Args:
             config (Path): Path to FCW configuration file.
             camera_config (Path): Path to camera configuration file.
-            netapp_address (str, optional): The URI and port of the FCW service interface.
-                Default taken from environment variables NETAPP_ADDRESS and NETAPP_PORT.
+            netapp_address (str, optional): The URI and port of the FCW service interface. Default taken from
+                environment variables NETAPP_ADDRESS and NETAPP_PORT.
             fps (float, optional): Video FPS. Default to 30.
-            results_callback (Callable, optional): Callback for receiving results.
-                Default to ResultsReader.get_results
+            results_callback (Callable, optional): Callback for receiving results. Default to ResultsReader.get_results
             stream_type (StreamType, optional): Stream type JPEG or H264. Default to H264.
             out_csv_dir (str, optional): Dir for CSV timestamps stats. Default to None.
             out_prefix (str, optional): Filename prefix for CSV timestamps stats. Default to "fcw_test_".
@@ -173,44 +175,36 @@ class CollisionWarningClient:
         logger.info("Initializing camera calibration")
         self.camera = Camera.from_dict(self.camera_config_dict)
 
-        width, height = self.camera.rectified_size
         self.fps = fps
-        # Check bad loaded FPS
+        # Check bad loaded FPS.
         if self.fps > 60:
             logger.warning(f"FPS {self.fps} is strangely high, newly set to 30")
             self.fps = 30
         self.results_callback = results_callback
         if self.results_callback is None:
-            self.results_viewer = ResultsReader(
-                out_csv_dir=out_csv_dir, out_prefix=out_prefix
-            )
+            self.results_viewer = ResultsReader(out_csv_dir=out_csv_dir, out_prefix=out_prefix)
             self.results_callback = self.results_viewer.get_results
         self.stream_type = stream_type
         self.frame_id = 0
 
-        # Create FCW client
-        self.client = NetAppClientBase(self.results_callback)
+        # Create FCW client.
+        self.client = NetAppClientBase({"results": CallbackInfoClient(ChannelType.JSON, self.results_callback)})
         logger.info(f"Register with netapp_address: {netapp_address}")
-        # Register client
+        # Register client.
         try:
-            if self.stream_type is StreamType.H264:
-                self.client.register(
-                    netapp_address,
-                    args={"h264": True, "config": self.config_dict, "camera_config": self.camera_config_dict,
-                          "fps": self.fps, "viz": viz, "viz_zmq_port": viz_zmq_port,
-                          "width": width, "height": height}
-                )
-            elif self.stream_type is StreamType.JPEG:
-                self.client.register(
-                    netapp_address,
-                    args={"config": self.config_dict, "camera_config": self.camera_config_dict,
-                          "fps": self.fps, "viz": viz, "viz_zmq_port": viz_zmq_port}
-                )
-            else:
-                raise Exception("Unknown stream type")
-        except Exception as e:
+            self.client.register(
+                netapp_address,
+                args={
+                    "config": self.config_dict,
+                    "camera_config": self.camera_config_dict,
+                    "fps": self.fps,
+                    "viz": viz,
+                    "viz_zmq_port": viz_zmq_port,
+                },
+            )
+        except Exception as ex:
             self.client.disconnect()
-            raise e
+            raise ex
         logger.info(f"Client registered")
 
     def send_image(self, frame: np.ndarray, timestamp: Optional[int] = None) -> None:
@@ -218,8 +212,8 @@ class CollisionWarningClient:
 
         Args:
             frame (np.ndarray): Image in numpy array format ("bgr24").
-            timestamp (int, optional): Timestamp for frame and results synchronization.
-                Default to current time (time.perf_counter_ns())
+            timestamp (int, optional): Timestamp for frame and results synchronization. Default to current time
+                (time.perf_counter_ns())
         """
 
         if self.client is not None:
@@ -227,10 +221,14 @@ class CollisionWarningClient:
             frame_undistorted = self.camera.rectify_image(frame)
             if not timestamp:
                 timestamp = time.perf_counter_ns()
-            self.client.send_image_ws(frame_undistorted, timestamp)
+            if self.stream_type is StreamType.H264:
+                self.client.send_image(frame_undistorted, "image", ChannelType.H264, timestamp)
+            elif self.stream_type is StreamType.JPEG:
+                self.client.send_image(frame_undistorted, "image", ChannelType.JPEG, timestamp)
 
     def stop(self) -> None:
         """Print stats and disconnect from FCW service."""
+
         logger.info("Collision warning client stopping")
 
         if hasattr(self, "results_viewer") and self.results_viewer is not None:
