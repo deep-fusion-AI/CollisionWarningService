@@ -1,7 +1,6 @@
-fcw-core-utils
+pyyaml
+opencv-python
 era-5g-client
 era-5g-interface
-opencv-python
-pyyaml
-websocket-client
-simple-websocket
+fcw-core-utils
+

@@ -1,9 +1,6 @@
+opencv-python
+pyzmq
 era_5g_interface
 era_5g_server
-opencv-python
-simple-websocket
-python-socketio
-flask
-pyzmq
 fcw-core-utils
 fcw-core

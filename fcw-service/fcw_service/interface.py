@@ -20,7 +20,7 @@ from era_5g_interface.dataclasses.control_command import ControlCommand, Control
 from era_5g_interface.channels import CallbackInfoServer, ChannelType, DATA_NAMESPACE, DATA_ERROR_EVENT
 from era_5g_server.server import NetworkApplicationServer
 
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("FCW interface")
 
 # Port of the 5G-ERA Network Application's server.

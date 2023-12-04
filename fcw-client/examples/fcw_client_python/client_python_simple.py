@@ -14,7 +14,7 @@ from era_5g_client.exceptions import FailedToConnect
 from era_5g_interface.utils.rate_timer import RateTimer
 
 # Set logging.
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("FCW client python")
 
 # Testing video file.
