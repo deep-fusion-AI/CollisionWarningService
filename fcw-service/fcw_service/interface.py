@@ -1,24 +1,23 @@
+import logging
 import os
-import numpy as np
+import sys
+import threading
 import time
+import traceback
 from dataclasses import dataclass
 from queue import Queue
 from typing import Dict, Tuple, Any
-import threading
-import logging
-import sys
-import traceback
 
-from fcw_service.collision_worker import CollisionWorker
-from fcw_core.yolo_detector import YOLODetector
+import numpy as np
 
-from era_5g_interface.task_handler_internal_q import TaskHandlerInternalQ
 import era_5g_interface.interface_helpers
-from era_5g_interface.interface_helpers import HeartBeatSender
-from era_5g_interface.dataclasses.control_command import ControlCommand, ControlCmdType
-
 from era_5g_interface.channels import CallbackInfoServer, ChannelType, DATA_NAMESPACE, DATA_ERROR_EVENT
+from era_5g_interface.dataclasses.control_command import ControlCommand, ControlCmdType
+from era_5g_interface.interface_helpers import HeartBeatSender
+from era_5g_interface.task_handler_internal_q import TaskHandlerInternalQ
 from era_5g_server.server import NetworkApplicationServer
+from fcw_core.yolo_detector import YOLODetector
+from fcw_service.collision_worker import CollisionWorker
 
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("FCW interface")
@@ -55,8 +54,13 @@ class Server(NetworkApplicationServer):
         """
 
         super().__init__(
-            callbacks_info={"image": CallbackInfoServer(ChannelType.H264, self.image_callback)}, *args,
-            **kwargs
+            callbacks_info={
+                "image": CallbackInfoServer(ChannelType.H264, self.image_callback),  # Due to 0.8.0 compatibility
+                "image_h264": CallbackInfoServer(ChannelType.H264, self.image_callback),
+                "image_jpeg": CallbackInfoServer(ChannelType.JPEG, self.image_callback),
+            },
+            *args,
+            **kwargs,
         )
 
         # List of registered tasks.
@@ -183,8 +187,10 @@ class Server(NetworkApplicationServer):
             f"Control command applied, eio_sid {eio_sid}, sid {sid}, "
             f"results sid {self.get_sid_of_data(eio_sid)}, command {command}"
         )
-        return True, (f"Control command applied, eio_sid {eio_sid}, sid {sid}, results sid"
-                      f" {self.get_sid_of_data(eio_sid)}, command {command}")
+        return True, (
+            f"Control command applied, eio_sid {eio_sid}, sid {sid}, results sid"
+            f" {self.get_sid_of_data(eio_sid)}, command {command}"
+        )
 
     def disconnect_callback(self, sid: str) -> None:
         """Called with client disconnection - deletes task and worker.

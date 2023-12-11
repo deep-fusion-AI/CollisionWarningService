@@ -5,15 +5,19 @@ import logging
 import os
 import statistics
 import time
+from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Callable, Optional
+from typing import Any, Dict, Callable, Optional, Union
+
 import numpy as np
 import yaml
 
+from era_5g_client.client import NetAppClient
+from era_5g_client.client_base import NetAppClientBase
+from era_5g_client.dataclasses import MiddlewareInfo
 from era_5g_interface.channels import CallbackInfoClient, ChannelType
 from fcw_core_utils.geometry import Camera
-from era_5g_client.client_base import NetAppClientBase
 
 logger = logging.getLogger(__name__)
 
@@ -41,8 +45,16 @@ class ResultsReader:
         self.delays_recv = []
         self.delays_send = []
         self.delays_process = []
-        self.timestamps = [["start_timestamp_ns", "recv_timestamp_ns", "send_timestamp_ns", "end_timestamp_ns",
-                            "timestamp_before_process", "timestamp_after_process"]]
+        self.timestamps = [
+            [
+                "start_timestamp_ns",
+                "recv_timestamp_ns",
+                "send_timestamp_ns",
+                "end_timestamp_ns",
+                "timestamp_before_process",
+                "timestamp_after_process",
+            ]
+        ]
         self.out_csv_dir = out_csv_dir
         self.out_prefix = out_prefix
 
@@ -127,8 +139,16 @@ class ResultsReader:
                 self.delays_send.append((send_timestamp - timestamp))
                 self.delays_process.append((timestamp_after_process - timestamp_before_process))
 
-            self.timestamps.append([timestamp, recv_timestamp, send_timestamp, results_timestamp,
-                                    timestamp_before_process, timestamp_after_process])
+            self.timestamps.append(
+                [
+                    timestamp,
+                    recv_timestamp,
+                    send_timestamp,
+                    results_timestamp,
+                    timestamp_before_process,
+                    timestamp_after_process,
+                ]
+            )
 
 
 class StreamType(Enum):
@@ -138,6 +158,16 @@ class StreamType(Enum):
     H264 = 2
 
 
+@dataclass
+class MiddlewareAllInfo:
+    """MiddlewareInfo with task ID, robot ID and resource lock values."""
+
+    middleware_info: MiddlewareInfo
+    task_id: str
+    robot_id: str
+    resource_lock = False
+
+
 class CollisionWarningClient:
     """Wrapper class for FCW client."""
 
@@ -145,7 +175,7 @@ class CollisionWarningClient:
         self,
         config: Path,
         camera_config: Path,
-        netapp_address: str = NETAPP_ADDRESS,
+        netapp_info: Union[str, MiddlewareAllInfo] = NETAPP_ADDRESS,
         fps: float = 30,
         viz: bool = True,
         viz_zmq_port: int = 5558,
@@ -159,10 +189,13 @@ class CollisionWarningClient:
         Args:
             config (Path): Path to FCW configuration file.
             camera_config (Path): Path to camera configuration file.
-            netapp_address (str, optional): The URI and port of the FCW service interface. Default taken from
-                environment variables NETAPP_ADDRESS and NETAPP_PORT.
-            fps (float, optional): Video FPS. Default to 30.
-            results_callback (Callable, optional): Callback for receiving results. Default to ResultsReader.get_results
+            netapp_info (Union[str, MiddlewareAllInfo]): The URI and port of the FCW service interface (default taken
+                from environment variables NETAPP_ADDRESS) or MiddlewareInfo with task ID, robot ID and resource lock
+                values.
+            fps (float): Video FPS. Default to 30.
+            viz (bool): Whether to enable visualization. Default to True.
+            viz_zmq_port (int): Port of the ZMQ server. Default to 5558.
+            results_callback (Callable, optional): Callback for receiving results. Default to ResultsReader.get_results.
             stream_type (StreamType, optional): Stream type JPEG or H264. Default to H264.
             out_csv_dir (str, optional): Dir for CSV timestamps stats. Default to None.
             out_prefix (str, optional): Filename prefix for CSV timestamps stats. Default to "fcw_test_".
@@ -188,24 +221,53 @@ class CollisionWarningClient:
         self.frame_id = 0
 
         # Create FCW client.
-        self.client = NetAppClientBase({"results": CallbackInfoClient(ChannelType.JSON, self.results_callback)})
-        logger.info(f"Register with netapp_address: {netapp_address}")
-        # Register client.
-        try:
-            self.client.register(
-                netapp_address,
-                args={
-                    "config": self.config_dict,
-                    "camera_config": self.camera_config_dict,
-                    "fps": self.fps,
-                    "viz": viz,
-                    "viz_zmq_port": viz_zmq_port,
-                },
+        if isinstance(netapp_info, MiddlewareAllInfo):
+            self.client = NetAppClient(
+                {"results": CallbackInfoClient(ChannelType.JSON, self.results_callback)},
+                logging_level=logging.getLogger().level,
             )
-        except Exception as ex:
-            self.client.disconnect()
-            raise ex
-        logger.info(f"Client registered")
+            logger.info(f"Register with netapp_info: {netapp_info}")
+            self.client.connect_to_middleware(netapp_info.middleware_info)
+            # Register client.
+            try:
+                self.client.run_task(
+                    task_id=netapp_info.task_id,
+                    robot_id=netapp_info.robot_id,
+                    resource_lock=False,
+                    args={
+                        "config": self.config_dict,
+                        "camera_config": self.camera_config_dict,
+                        "fps": self.fps,
+                        "viz": viz,
+                        "viz_zmq_port": viz_zmq_port,
+                    },
+                )
+            except Exception as ex:
+                self.client.disconnect()
+                raise ex
+            logger.info(f"Client registered")
+        else:
+            self.client = NetAppClientBase(
+                {"results": CallbackInfoClient(ChannelType.JSON, self.results_callback)},
+                logging_level=logging.getLogger().level,
+            )
+            logger.info(f"Register with netapp_info: {netapp_info}")
+            # Register client.
+            try:
+                self.client.register(
+                    netapp_info,
+                    args={
+                        "config": self.config_dict,
+                        "camera_config": self.camera_config_dict,
+                        "fps": self.fps,
+                        "viz": viz,
+                        "viz_zmq_port": viz_zmq_port,
+                    },
+                )
+            except Exception as ex:
+                self.client.disconnect()
+                raise ex
+            logger.info(f"Client registered")
 
     def send_image(self, frame: np.ndarray, timestamp: Optional[int] = None) -> None:
         """Send image to FCW service including rectification.
@@ -222,9 +284,9 @@ class CollisionWarningClient:
             if not timestamp:
                 timestamp = time.perf_counter_ns()
             if self.stream_type is StreamType.H264:
-                self.client.send_image(frame_undistorted, "image", ChannelType.H264, timestamp)
+                self.client.send_image(frame_undistorted, "image_h264", ChannelType.H264, timestamp)
             elif self.stream_type is StreamType.JPEG:
-                self.client.send_image(frame_undistorted, "image", ChannelType.JPEG, timestamp)
+                self.client.send_image(frame_undistorted, "image_jpeg", ChannelType.JPEG, timestamp)
 
     def stop(self) -> None:
         """Print stats and disconnect from FCW service."""

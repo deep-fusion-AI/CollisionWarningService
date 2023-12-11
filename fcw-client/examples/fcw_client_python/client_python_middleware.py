@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import logging
+import os
 import signal
 import sys
 import time
@@ -11,10 +12,11 @@ from pathlib import Path
 import cv2
 
 # FCW and 5G-ERA stuff.
+from era_5g_client.dataclasses import MiddlewareInfo
 from era_5g_client.exceptions import FailedToConnect
 from era_5g_interface.exceptions import BackPressureException
 from era_5g_interface.utils.rate_timer import RateTimer
-from fcw_client.client_common import CollisionWarningClient, StreamType
+from fcw_client.client_common import CollisionWarningClient, StreamType, MiddlewareAllInfo
 
 # Set logging.
 logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -35,6 +37,16 @@ CAMERA_CONFIG_FILE = Path("../../../videos/video3.yaml")
 # stopped flag for SIGTERM handler (stopping video frames sending).
 stopped = False
 collision_warning_client = None
+
+MIDDLEWARE_ADDRESS = os.getenv("MIDDLEWARE_ADDRESS", "127.0.0.1")
+# middleware user ID
+MIDDLEWARE_USER = os.getenv("MIDDLEWARE_USER", "00000000-0000-0000-0000-000000000000")
+# middleware password
+MIDDLEWARE_PASSWORD = os.getenv("MIDDLEWARE_PASSWORD", "password")
+# middleware NetApp id (task id)
+MIDDLEWARE_TASK_ID = os.getenv("MIDDLEWARE_TASK_ID", "00000000-0000-0000-0000-000000000000")
+# middleware robot id (robot id)
+MIDDLEWARE_ROBOT_ID = os.getenv("MIDDLEWARE_ROBOT_ID", "00000000-0000-0000-0000-000000000000")
 
 
 def signal_handler(sig: int, *_) -> None:
@@ -98,6 +110,11 @@ def main() -> None:
         collision_warning_client = CollisionWarningClient(
             config=args.config,
             camera_config=args.camera,
+            netapp_info=MiddlewareAllInfo(
+                MiddlewareInfo(MIDDLEWARE_ADDRESS, MIDDLEWARE_USER, MIDDLEWARE_PASSWORD),
+                task_id=MIDDLEWARE_TASK_ID,
+                robot_id=MIDDLEWARE_ROBOT_ID,
+            ),
             fps=fps,
             stream_type=StreamType(args.stream_type),
             out_csv_dir=args.out_csv_dir,

@@ -1,17 +1,19 @@
 from __future__ import annotations
 
+import logging
+import sys
 import traceback
 from argparse import ArgumentParser
 from pathlib import Path
-import cv2
-import sys
-import logging
 from typing import Any, Dict
 
+import cv2
+
 # FCW and 5G-ERA stuff.
-from fcw_client.client_common import CollisionWarningClient
 from era_5g_client.exceptions import FailedToConnect
+from era_5g_interface.exceptions import BackPressureException
 from era_5g_interface.utils.rate_timer import RateTimer
+from fcw_client.client_common import CollisionWarningClient
 
 # Set logging.
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
@@ -84,7 +86,10 @@ def main() -> None:
             if not ret:
                 break
             # Send to FCW service for detection/processing.
-            collision_warning_client.send_image(frame)
+            try:
+                collision_warning_client.send_image(frame)
+            except BackPressureException as e:
+                logger.warning(f"BackPressureException raised while sending: {e}")
             # Sleep until next frame should be sent (with given fps).
             rate_timer.sleep()
         cap.release()
