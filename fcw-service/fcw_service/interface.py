@@ -1,7 +1,7 @@
 import logging
 import os
+import signal
 import sys
-import threading
 import time
 import traceback
 from dataclasses import dataclass
@@ -10,10 +10,9 @@ from typing import Dict, Tuple, Any
 
 import numpy as np
 
-import era_5g_interface.interface_helpers
 from era_5g_interface.channels import CallbackInfoServer, ChannelType, DATA_NAMESPACE, DATA_ERROR_EVENT
 from era_5g_interface.dataclasses.control_command import ControlCommand, ControlCmdType
-from era_5g_interface.interface_helpers import HeartBeatSender
+from era_5g_interface.interface_helpers import HeartBeatSender, MIDDLEWARE_REPORT_INTERVAL, RepeatedTimer
 from era_5g_interface.task_handler_internal_q import TaskHandlerInternalQ
 from era_5g_server.server import NetworkApplicationServer
 from fcw_core.yolo_detector import YOLODetector
@@ -67,10 +66,11 @@ class Server(NetworkApplicationServer):
         self.tasks: Dict[str, TaskAndWorker] = dict()
 
         self.heart_beat_sender = HeartBeatSender()
-        self.heart_beat_timer()
+        heart_beat_timer = RepeatedTimer(MIDDLEWARE_REPORT_INTERVAL, self.heart_beat)
+        heart_beat_timer.start()
 
-    def heart_beat_timer(self):
-        """Heart beat timer."""
+    def heart_beat(self):
+        """Heart beat generation and sending."""
 
         latencies = []
         for task_and_worker in self.tasks.values():
@@ -79,8 +79,8 @@ class Server(NetworkApplicationServer):
         if len(latencies) > 0:
             avg_latency = float(np.mean(np.array(latencies)))
 
-        queue_size = 1
-        queue_occupancy = 1
+        queue_size = NETAPP_INPUT_QUEUE
+        queue_occupancy = 1  # TODO: Compute for every worker?
 
         self.heart_beat_sender.send_middleware_heart_beat(
             avg_latency=avg_latency,
@@ -88,7 +88,6 @@ class Server(NetworkApplicationServer):
             queue_occupancy=queue_occupancy,
             current_robot_count=len(self.tasks),
         )
-        threading.Timer(era_5g_interface.interface_helpers.MIDDLEWARE_REPORT_INTERVAL, self.heart_beat_timer).start()
 
     def image_callback(self, sid: str, data: Dict[str, Any]) -> None:
         """Allows to receive decoded image using the websocket transport.
@@ -162,7 +161,7 @@ class Server(NetworkApplicationServer):
                     fps,
                     viz,
                     viz_zmq_port,
-                    name=f"Detector {eio_sid}",
+                    name=f"Collision Worker {eio_sid}",
                     daemon=True,
                 )
             except Exception as ex:
@@ -209,6 +208,18 @@ class Server(NetworkApplicationServer):
             logger.info(f"Task handler and worker deleted: {eio_sid}")
 
         logger.info(f"Client disconnected from {DATA_NAMESPACE} namespace, eio_sid {eio_sid}, sid {sid}")
+
+
+def signal_handler(sig: int, *_) -> None:
+    """Signal handler for SIGTERM and SIGINT."""
+
+    logger.info(f"Terminating ({signal.Signals(sig).name}) ...")
+    global stopped
+    stopped = True
+
+
+# signal.signal(signal.SIGTERM, signal_handler)
+# signal.signal(signal.SIGINT, signal_handler)
 
 
 def main():

@@ -284,6 +284,7 @@ class CollisionWarningClient:
             if not timestamp:
                 timestamp = time.perf_counter_ns()
             if self.stream_type is StreamType.H264:
+                # self.client.send_image(frame_undistorted, "image", ChannelType.H264, timestamp)
                 self.client.send_image(frame_undistorted, "image_h264", ChannelType.H264, timestamp)
             elif self.stream_type is StreamType.JPEG:
                 self.client.send_image(frame_undistorted, "image_jpeg", ChannelType.JPEG, timestamp)

@@ -7,6 +7,7 @@ import time
 import traceback
 from argparse import ArgumentParser
 from pathlib import Path
+from typing import Optional
 
 import cv2
 
@@ -34,7 +35,7 @@ CAMERA_CONFIG_FILE = Path("../../../videos/video3.yaml")
 
 # stopped flag for SIGTERM handler (stopping video frames sending).
 stopped = False
-collision_warning_client = None
+collision_warning_client: Optional[CollisionWarningClient] = None
 
 
 def signal_handler(sig: int, *_) -> None:
@@ -42,6 +43,10 @@ def signal_handler(sig: int, *_) -> None:
 
     logger.info(f"Terminating ({signal.Signals(sig).name}) ...")
     global stopped
+    if stopped:
+        if collision_warning_client is not None:
+            collision_warning_client.stop()
+        sys.exit(1)
     stopped = True
 
 
@@ -131,13 +136,11 @@ def main() -> None:
 
     except FailedToConnect as ex:
         logger.error(f"Failed to connect to server: {ex}")
-        sys.exit(1)
     except KeyboardInterrupt:
         logger.info("Terminating ...")
     except Exception as ex:
         traceback.print_exc()
         logger.error(f"Exception: {repr(ex)}")
-        sys.exit(1)
     finally:
         if collision_warning_client is not None:
             collision_warning_client.stop()
