@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fcw-core"
-version = "0.8.0"
+version = "0.9.0"
 description = "Early collision warning Network Application for Transportation use case - core part"
 authors = ["Petr Kleparnik <pkleparnik@cognitechna.cz>", "Roman Juranek <rjuranek@cognitechna.cz>"]
 readme = "README.md"
@@ -24,7 +24,7 @@ psutil = ">=5.9.6"
 tqdm = ">=4.66.1"
 seaborn = ">=0.13.0"
 ultralytics = ">=8.0.220"
-fcw-core-utils = "^0.8.0"
+fcw-core-utils = "^0.9.0"
 matplotlib = ">=3.7.4"
 
 #pip3 install --upgrade --force-reinstall torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118

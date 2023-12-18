@@ -20,7 +20,7 @@ from era_5g_interface.utils.rate_timer import RateTimer
 from fcw_client.client_common import CollisionWarningClient, StreamType, MiddlewareAllInfo
 
 # Set logging.
-logging.basicConfig(stream=sys.stdout, level=logging.DEBUG, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("FCW client python")
 
 # Testing video file.

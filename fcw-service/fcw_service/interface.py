@@ -54,7 +54,6 @@ class Server(NetworkApplicationServer):
 
         super().__init__(
             callbacks_info={
-                "image": CallbackInfoServer(ChannelType.H264, self.image_callback),  # Due to 0.8.0 compatibility
                 "image_h264": CallbackInfoServer(ChannelType.H264, self.image_callback),
                 "image_jpeg": CallbackInfoServer(ChannelType.JPEG, self.image_callback),
             },
@@ -102,7 +101,7 @@ class Server(NetworkApplicationServer):
 
         if eio_sid not in self.tasks:
             logger.error(f"Non-registered client {eio_sid} tried to send data")
-            self.send_data({"message": "Non-registered client tried to send data"}, DATA_ERROR_EVENT, sid)
+            self.send_data({"message": "Non-registered client tried to send data"}, DATA_ERROR_EVENT, sid=sid)
             return
 
         task = self.tasks[eio_sid].task
@@ -208,18 +207,6 @@ class Server(NetworkApplicationServer):
             logger.info(f"Task handler and worker deleted: {eio_sid}")
 
         logger.info(f"Client disconnected from {DATA_NAMESPACE} namespace, eio_sid {eio_sid}, sid {sid}")
-
-
-def signal_handler(sig: int, *_) -> None:
-    """Signal handler for SIGTERM and SIGINT."""
-
-    logger.info(f"Terminating ({signal.Signals(sig).name}) ...")
-    global stopped
-    stopped = True
-
-
-# signal.signal(signal.SIGTERM, signal_handler)
-# signal.signal(signal.SIGINT, signal_handler)
 
 
 def main():
