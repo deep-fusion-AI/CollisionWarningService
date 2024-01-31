@@ -35,19 +35,20 @@ CONFIG_FILE = Path("../../../config/config.yaml")
 CAMERA_CONFIG_FILE = Path("../../../videos/video3.yaml")
 # CAMERA_CONFIG_FILE = Path("../../../videos/bringauto.yaml")
 
-# stopped flag for SIGTERM handler (stopping video frames sending).
-stopped = False
+# Stopped flag for SIGTERM handler (stopping video frames sending).
+stopped = True
 collision_warning_client: Optional[CollisionWarningClient] = None
 
-MIDDLEWARE_ADDRESS = os.getenv("MIDDLEWARE_ADDRESS", "127.0.0.1")
-# middleware user ID
-MIDDLEWARE_USER = os.getenv("MIDDLEWARE_USER", "00000000-0000-0000-0000-000000000000")
-# middleware password
-MIDDLEWARE_PASSWORD = os.getenv("MIDDLEWARE_PASSWORD", "password")
-# middleware NetApp id (task id)
-MIDDLEWARE_TASK_ID = os.getenv("MIDDLEWARE_TASK_ID", "00000000-0000-0000-0000-000000000000")
-# middleware robot id (robot id)
-MIDDLEWARE_ROBOT_ID = os.getenv("MIDDLEWARE_ROBOT_ID", "00000000-0000-0000-0000-000000000000")
+# Middleware address.
+MIDDLEWARE_ADDRESS = str(os.getenv("MIDDLEWARE_ADDRESS", "127.0.0.1"))
+# Middleware user ID.
+MIDDLEWARE_USER = str(os.getenv("MIDDLEWARE_USER", "00000000-0000-0000-0000-000000000000"))
+# Middleware password.
+MIDDLEWARE_PASSWORD = str(os.getenv("MIDDLEWARE_PASSWORD", "password"))
+# Middleware Network Application ID (task ID).
+MIDDLEWARE_TASK_ID = str(os.getenv("MIDDLEWARE_TASK_ID", "00000000-0000-0000-0000-000000000000"))
+# Middleware robot ID (robot ID).
+MIDDLEWARE_ROBOT_ID = str(os.getenv("MIDDLEWARE_ROBOT_ID", "00000000-0000-0000-0000-000000000000"))
 
 
 def signal_handler(sig: int, *_) -> None:
@@ -71,7 +72,7 @@ def main() -> None:
 
     # Parse arguments.
     parser = ArgumentParser()
-    parser.add_argument("-s", "--stream_type", type=int, help="StreamType: 1 = JPEG, 2 = H264", default=StreamType.H264)
+    parser.add_argument("-s", "--stream_type", type=int, help="StreamType: 1 = JPEG, 2 = H.264, 3 = HEVC", default=StreamType.H264)
     parser.add_argument("-c", "--config", type=Path, help="Collision warning config", default=CONFIG_FILE)
     parser.add_argument("--camera", type=Path, help="Camera settings", default=CAMERA_CONFIG_FILE)
     parser.add_argument("-o", "--out_csv_dir", type=str, help="Output CSV dir", default=None)
@@ -83,7 +84,7 @@ def main() -> None:
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs="?", default=TEST_VIDEO_FILE)
     args = parser.parse_args()
 
-    global collision_warning_client
+    global collision_warning_client, stopped
 
     try:
         # Create a video capture to pass images to the 5G-ERA Network Application.
@@ -131,6 +132,7 @@ def main() -> None:
         # Start time
         start_time = time.perf_counter_ns()
         # Check elapsed time or stopped flag.
+        stopped = False
         # Play time in ns
         play_time_ns = args.play_time * 1.0e9
         # Main processing loop

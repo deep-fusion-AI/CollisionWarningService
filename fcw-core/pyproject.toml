@@ -1,33 +1,33 @@
 [tool.poetry]
 name = "fcw-core"
-version = "0.9.0"
+version = "0.10.0"
 description = "Early collision warning Network Application for Transportation use case - core part"
-authors = ["Petr Kleparnik <pkleparnik@cognitechna.cz>", "Roman Juranek <rjuranek@cognitechna.cz>"]
+authors = ["Petr Kleparnik <p.kleparnik@cognitechna.cz>", "Roman Juranek <r.juranek@cognitechna.cz>"]
 readme = "README.md"
 repository = "https://github.com/5G-ERA/CollisionWarningService"
 packages = [{include = "fcw_core"}]
 
 [tool.poetry.dependencies]
 python = ">=3.8"
-gitpython = ">=3.1.40"
+gitpython = ">=3.1.41"
 pyyaml = ">=6.0"
 opencv-python = ">=4.8"
 filterpy = ">=1.4.5"
 shapely = ">=2.0.2"
-torch = ">=2.1.1"
-torchvision = ">=0.16.1"
-torchaudio = ">=2.1.1"
-more-itertools = ">=10.1.0"
+torch = ">=2.1.2"
+torchvision = ">=0.16.2"
+torchaudio = ">=2.1.2"
+more-itertools = ">=10.2.0"
 pandas = ">=2.0.3"
 requests = ">=2.31.0"
-psutil = ">=5.9.6"
+psutil = ">=5.9.8"
 tqdm = ">=4.66.1"
-seaborn = ">=0.13.0"
-ultralytics = ">=8.0.220"
-fcw-core-utils = "^0.9.0"
+seaborn = ">=0.13.2"
+ultralytics = ">=8.1.8"
+fcw-core-utils = "^0.10.0"
 matplotlib = ">=3.7.4"
 
-#pip3 install --upgrade --force-reinstall torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118
+#pip install --upgrade --force-reinstall torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu121
 
 [tool.poetry.scripts]
 fcw_example = "fcw_core.fcw_example:main"

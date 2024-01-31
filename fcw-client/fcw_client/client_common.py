@@ -8,7 +8,7 @@ import time
 from dataclasses import dataclass
 from enum import Enum
 from pathlib import Path
-from typing import Any, Dict, Callable, Optional, Union
+from typing import Any, Callable, Dict, Optional, Union
 
 import numpy as np
 import yaml
@@ -17,6 +17,7 @@ from era_5g_client.client import NetAppClient
 from era_5g_client.client_base import NetAppClientBase
 from era_5g_client.dataclasses import MiddlewareInfo
 from era_5g_interface.channels import CallbackInfoClient, ChannelType
+from era_5g_interface.interface_helpers import HEARTBEAT_CLIENT_EVENT
 from fcw_core_utils.geometry import Camera
 
 logger = logging.getLogger(__name__)
@@ -28,6 +29,7 @@ DEBUG_PRINT_DELAY = True  # Prints the delay between capturing image and receivi
 
 # URL of the FCW service.
 NETAPP_ADDRESS = str(os.getenv("NETAPP_ADDRESS", "http://localhost:5896"))
+HEARTBEAT_ADDRESS = str(os.getenv("HEARTBEAT_ADDRESS", "http://localhost:5898"))
 
 
 class ResultsReader:
@@ -156,6 +158,7 @@ class StreamType(Enum):
 
     JPEG = 1
     H264 = 2
+    HEVC = 3
 
 
 @dataclass
@@ -183,6 +186,7 @@ class CollisionWarningClient:
         stream_type: Optional[StreamType] = StreamType.H264,
         out_csv_dir: Optional[str] = None,
         out_prefix: Optional[str] = "fcw_test_",
+        stats: bool = False,
     ) -> None:
         """Constructor.
 
@@ -196,7 +200,7 @@ class CollisionWarningClient:
             viz (bool): Whether to enable visualization. Default to True.
             viz_zmq_port (int): Port of the ZMQ server. Default to 5558.
             results_callback (Callable, optional): Callback for receiving results. Default to ResultsReader.get_results.
-            stream_type (StreamType, optional): Stream type JPEG or H264. Default to H264.
+            stream_type (StreamType, optional): Stream type JPEG or H264 or HEVC. Default to H264.
             out_csv_dir (str, optional): Dir for CSV timestamps stats. Default to None.
             out_prefix (str, optional): Filename prefix for CSV timestamps stats. Default to "fcw_test_".
         """
@@ -220,11 +224,33 @@ class CollisionWarningClient:
         self.stream_type = stream_type
         self.frame_id = 0
 
+        # Test heartbeat module
+        self.heartbeat_client = NetAppClientBase(
+            {},
+            logging_level=logging.getLogger().level,
+            stats=stats,
+        )
+
+        logger.info(f"Register heartbeat client: {HEARTBEAT_ADDRESS}")
+        # Register heartbeat client.
+        try:
+            self.heartbeat_client.register(HEARTBEAT_ADDRESS)
+            logger.info(f"Heartbeat client registered")
+
+            logger.info(
+                self.heartbeat_client.send_data("GET_BEST_MIDDLEWARE_ADDRESS", HEARTBEAT_CLIENT_EVENT, blocking=True)
+            )
+        except Exception as ex:
+            self.heartbeat_client.disconnect()
+            logger.warning(f"Cannot connect to heartbeat module")
+            # raise ex
+
         # Create FCW client.
         if isinstance(netapp_info, MiddlewareAllInfo):
             self.client = NetAppClient(
                 {"results": CallbackInfoClient(ChannelType.JSON, self.results_callback)},
                 logging_level=logging.getLogger().level,
+                stats=stats,
             )
             logger.info(f"Register with netapp_info: {netapp_info}")
             self.client.connect_to_middleware(netapp_info.middleware_info)
@@ -250,6 +276,7 @@ class CollisionWarningClient:
             self.client = NetAppClientBase(
                 {"results": CallbackInfoClient(ChannelType.JSON, self.results_callback)},
                 logging_level=logging.getLogger().level,
+                stats=stats,
             )
             logger.info(f"Register with netapp_info: {netapp_info}")
             # Register client.
@@ -269,6 +296,9 @@ class CollisionWarningClient:
                 raise ex
             logger.info(f"Client registered")
 
+    def info_callback(self, data: Dict[str, Any]) -> None:
+        logger.info(data)
+
     def send_image(self, frame: np.ndarray, timestamp: Optional[int] = None) -> None:
         """Send image to FCW service including rectification.
 
@@ -285,6 +315,8 @@ class CollisionWarningClient:
                 timestamp = time.perf_counter_ns()
             if self.stream_type is StreamType.H264:
                 self.client.send_image(frame_undistorted, "image_h264", ChannelType.H264, timestamp)
+            elif self.stream_type is StreamType.HEVC:
+                self.client.send_image(frame_undistorted, "image_hevc", ChannelType.HEVC, timestamp)
             elif self.stream_type is StreamType.JPEG:
                 self.client.send_image(frame_undistorted, "image_jpeg", ChannelType.JPEG, timestamp)
 

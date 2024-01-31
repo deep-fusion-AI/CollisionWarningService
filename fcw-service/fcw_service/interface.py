@@ -22,7 +22,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s [
 logger = logging.getLogger("FCW interface")
 
 # Port of the 5G-ERA Network Application's server.
-NETAPP_PORT = os.getenv("NETAPP_PORT", 5896)
+NETAPP_PORT = int(os.getenv("NETAPP_PORT", 5896))
 # Input queue size.
 NETAPP_INPUT_QUEUE = int(os.getenv("NETAPP_INPUT_QUEUE", 1))
 # Event name for image error.
@@ -55,6 +55,7 @@ class Server(NetworkApplicationServer):
         super().__init__(
             callbacks_info={
                 "image_h264": CallbackInfoServer(ChannelType.H264, self.image_callback),
+                "image_hevc": CallbackInfoServer(ChannelType.HEVC, self.image_callback),
                 "image_jpeg": CallbackInfoServer(ChannelType.JPEG, self.image_callback),
             },
             *args,
@@ -81,7 +82,7 @@ class Server(NetworkApplicationServer):
         queue_size = NETAPP_INPUT_QUEUE
         queue_occupancy = 1  # TODO: Compute for every worker?
 
-        self.heart_beat_sender.send_middleware_heart_beat(
+        self.heart_beat_sender.send_application_heart_beat(
             avg_latency=avg_latency,
             queue_size=queue_size,
             queue_occupancy=queue_occupancy,
