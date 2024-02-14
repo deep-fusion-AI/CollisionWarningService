@@ -72,13 +72,13 @@ test = ["hypothesis", "pytest", "pytest-benchmark[histogram]", "pytest-cov", "py
 
 [[package]]
 name = "certifi"
-version = "2023.11.17"
+version = "2024.2.2"
 description = "Python package for providing Mozilla's CA Bundle."
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "certifi-2023.11.17-py3-none-any.whl", hash = "sha256:e036ab49d5b79556f99cfc2d9320b34cfbe5be05c5871b51de9329f0603b0474"},
-    {file = "certifi-2023.11.17.tar.gz", hash = "sha256:9b469f3a900bf28dc19b8cfbf8019bf47f7fdd1a65a1d4ffb98fc14166beb4d1"},
+    {file = "certifi-2024.2.2-py3-none-any.whl", hash = "sha256:dc383c07b76109f368f6106eee2b593b04a011ea4d55f652c6ca24a754d1cdd1"},
+    {file = "certifi-2024.2.2.tar.gz", hash = "sha256:0569859f95fc761b18b45ef421b1290a0f65f147e92a1e5eb3e635f9a5e4e66f"},
 ]
 
 [[package]]
@@ -330,13 +330,13 @@ tests = ["pytest", "pytest-cov", "pytest-xdist"]
 
 [[package]]
 name = "era-5g-client"
-version = "0.10.0"
+version = "0.10.1"
 description = "A client for 5G-ERA Network Applications"
 optional = false
 python-versions = ">=3.8"
 files = [
-    {file = "era_5g_client-0.10.0-py3-none-any.whl", hash = "sha256:481072f638ff8f23d84ee527309ef190afc31f8aa9ff3d99f1c2ca29ae21881f"},
-    {file = "era_5g_client-0.10.0.tar.gz", hash = "sha256:a1bc057817b91ac6a88f472aa190dd5043cb1a5597d20a4c6f4586bf46f2f57c"},
+    {file = "era_5g_client-0.10.1-py3-none-any.whl", hash = "sha256:b5999332450d50a559669b11168ec3ce186a2c525c58a33acdb44ae4096c2d88"},
+    {file = "era_5g_client-0.10.1.tar.gz", hash = "sha256:b1e6a093772d647aed7165077ca2958882a444fef7061d4af07dcec7606227e8"},
 ]
 
 [package.dependencies]
@@ -944,13 +944,13 @@ six = ">=1.5"
 
 [[package]]
 name = "python-engineio"
-version = "4.8.2"
+version = "4.9.0"
 description = "Engine.IO server and client for Python"
 optional = false
 python-versions = ">=3.6"
 files = [
-    {file = "python-engineio-4.8.2.tar.gz", hash = "sha256:f8609e3afdda318fdc336b4ba2de8dd397bb8f9b8a1b43e56c27330e32c2e34c"},
-    {file = "python_engineio-4.8.2-py3-none-any.whl", hash = "sha256:a357f0aba275c311b66f22181472ed5b174bbc541742eea1d16feae2fa1afabd"},
+    {file = "python-engineio-4.9.0.tar.gz", hash = "sha256:e87459c15638e567711fd156e6f9c4a402668871bed79523f0ecfec744729ec7"},
+    {file = "python_engineio-4.9.0-py3-none-any.whl", hash = "sha256:979859bff770725b75e60353d7ae53b397e8b517d05ba76733b404a3dcca3e4c"},
 ]
 
 [package.dependencies]
@@ -963,13 +963,13 @@ docs = ["sphinx"]
 
 [[package]]
 name = "python-socketio"
-version = "5.11.0"
+version = "5.11.1"
 description = "Socket.IO server and client for Python"
 optional = false
-python-versions = ">=3.6"
+python-versions = ">=3.8"
 files = [
-    {file = "python-socketio-5.11.0.tar.gz", hash = "sha256:b03186e04b942088781f6286c13604a853e5e35ed59158c51ff7af22fa032e6f"},
-    {file = "python_socketio-5.11.0-py3-none-any.whl", hash = "sha256:cfcb0163d77c8d23b98285754e79016786740dd901268654a52823da0bc73382"},
+    {file = "python-socketio-5.11.1.tar.gz", hash = "sha256:bbcbd758ed8c183775cb2853ba001361e2fa018babf5cbe11a5b77e91c2ec2a2"},
+    {file = "python_socketio-5.11.1-py3-none-any.whl", hash = "sha256:f1a0228b8b1fbdbd93fbbedd821ebce0ef54b2b5bf6e98fcf710deaa7c574259"},
 ]
 
 [package.dependencies]
@@ -1350,4 +1350,4 @@ testing = ["big-O", "jaraco.functools", "jaraco.itertools", "more-itertools", "p
 [metadata]
 lock-version = "2.0"
 python-versions = ">=3.8"
-content-hash = "691af45c84fafe4de01b657c57aafe9d935d166d669fe6f82bb7e0db7cb42136"
+content-hash = "5510fce0d2a047b3abc04b22220bd5c1b220d0a25463dad1a02dc234ec9fd651"
