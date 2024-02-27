@@ -6,6 +6,7 @@ from threading import Thread, Event
 from typing import Callable, Any
 
 import zmq
+from zmq import ZMQError
 
 from era_5g_interface.interface_helpers import LatencyMeasurements
 from fcw_core.detection import *
@@ -65,10 +66,14 @@ class CollisionWorker(Thread):
 
         # Visualization stuff.
         if self._viz:
-            self._context = zmq.Context()
-            self._socket = self._context.socket(zmq.PUB)
-            logger.info(f"Publishing visualization on ZeroMQ tcp://*:{viz_zmq_port}")
-            self._socket.bind("tcp://*:%s" % viz_zmq_port)
+            try:
+                self._context = zmq.Context()
+                self._socket = self._context.socket(zmq.PUB)
+                logger.info(f"Publishing visualization on ZeroMQ tcp://*:{viz_zmq_port}")
+                self._socket.bind("tcp://*:%s" % viz_zmq_port)
+            except ZMQError as e:
+                logger.error(f"Visualization was disabled on this worker: {e}")
+                self._viz = False
 
     def stop(self) -> None:
         """Set stop event to stop FCW worker."""
@@ -195,12 +200,16 @@ class CollisionWorker(Thread):
                 object_statuses[i].path = [pts for pts in object_statuses[i].path.coords]
             object_statuses = [asdict(object_status) for object_status in object_statuses]
 
+            send_timestamp = time.perf_counter_ns()
+
+            self.latency_measurements.store_latency(send_timestamp - metadata["recv_timestamp"])
+
             return {
                 "timestamp": metadata.get("timestamp", 0),
                 "recv_timestamp": metadata.get("recv_timestamp", 0),
                 "timestamp_before_process": metadata["timestamp_before_process"],
                 "timestamp_after_process": metadata["timestamp_after_process"],
-                "send_timestamp": time.perf_counter_ns(),
+                "send_timestamp": send_timestamp,
                 "dangerous_detections": dangerous_detections,
                 "objects": object_statuses,
             }

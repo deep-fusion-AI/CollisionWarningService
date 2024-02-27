@@ -55,6 +55,7 @@ def main() -> None:
     parser.add_argument("-c", "--config", type=Path, help="Collision warning config", default=CONFIG_FILE)
     parser.add_argument("--camera", type=Path, help="Camera settings", default=CAMERA_CONFIG_FILE)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs="?", default=TEST_VIDEO_FILE)
+    parser.add_argument("-m", "--measuring", type=bool, help="Enable extended measuring logs", default=False)
     args = parser.parse_args()
 
     collision_warning_client = None
@@ -72,7 +73,11 @@ def main() -> None:
         # Create collision warning client with given parameters,
         # width and height for client registration is loaded from camera config.
         collision_warning_client = CollisionWarningClient(
-            config=args.config, camera_config=args.camera, fps=fps, results_callback=results_callback
+            config=args.config,
+            camera_config=args.camera,
+            fps=fps,
+            results_callback=results_callback,
+            extended_measuring=args.measuring,
         )
 
         # Rate timer for control the speed of a loop (fps).

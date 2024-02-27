@@ -187,6 +187,7 @@ class CollisionWarningClient:
         out_csv_dir: Optional[str] = None,
         out_prefix: Optional[str] = "fcw_test_",
         stats: bool = False,
+        extended_measuring: bool = False,
     ) -> None:
         """Constructor.
 
@@ -203,6 +204,8 @@ class CollisionWarningClient:
             stream_type (StreamType, optional): Stream type JPEG or H264 or HEVC. Default to H264.
             out_csv_dir (str, optional): Dir for CSV timestamps stats. Default to None.
             out_prefix (str, optional): Filename prefix for CSV timestamps stats. Default to "fcw_test_".
+            stats (bool): Store output data sizes.
+            extended_measuring (bool): Enable logging of measuring.
         """
 
         logger.info("Loading configuration file {cfg}".format(cfg=config))
@@ -229,6 +232,7 @@ class CollisionWarningClient:
             {},
             logging_level=logging.getLogger().level,
             stats=stats,
+            extended_measuring=False,
         )
 
         logger.info(f"Register heartbeat client: {HEARTBEAT_ADDRESS}")
@@ -277,6 +281,7 @@ class CollisionWarningClient:
                 {"results": CallbackInfoClient(ChannelType.JSON, self.results_callback)},
                 logging_level=logging.getLogger().level,
                 stats=stats,
+                extended_measuring=extended_measuring,
             )
             logger.info(f"Register with netapp_info: {netapp_info}")
             # Register client.

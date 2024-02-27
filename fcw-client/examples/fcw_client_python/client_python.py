@@ -71,6 +71,7 @@ def main() -> None:
     parser.add_argument("-t", "--play_time", type=int, help="Video play time in seconds", default=5000)
     parser.add_argument("--fps", type=int, help="Video FPS", default=None)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs="?", default=TEST_VIDEO_FILE)
+    parser.add_argument("-m", "--measuring", type=bool, help="Enable extended measuring logs", default=False)
     args = parser.parse_args()
 
     global collision_warning_client
@@ -110,6 +111,7 @@ def main() -> None:
             out_csv_dir=args.out_csv_dir,
             out_prefix=args.out_prefix,
             stats=True,
+            extended_measuring=args.measuring,
         )
 
         # Rate timer for control the speed of a loop (fps).

@@ -5,6 +5,7 @@ ENV TZ=Europe/Prague
 
 RUN apt-get update \
     && apt-get install -y \
+    tzdata \
     git \
     python3-pip \
     python-is-python3 \

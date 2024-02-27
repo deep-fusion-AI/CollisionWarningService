@@ -1,6 +1,5 @@
 import logging
 import os
-import signal
 import sys
 import time
 import traceback
@@ -12,9 +11,9 @@ import numpy as np
 
 from era_5g_interface.channels import CallbackInfoServer, ChannelType, DATA_NAMESPACE, DATA_ERROR_EVENT
 from era_5g_interface.dataclasses.control_command import ControlCommand, ControlCmdType
-from era_5g_interface.interface_helpers import HeartBeatSender, MIDDLEWARE_REPORT_INTERVAL, RepeatedTimer
+from era_5g_interface.interface_helpers import HeartbeatSender
 from era_5g_interface.task_handler_internal_q import TaskHandlerInternalQ
-from era_5g_server.server import NetworkApplicationServer
+from era_5g_server.server import NETAPP_STATUS_ADDRESS, NetworkApplicationServer, generate_application_heartbeat_data
 from fcw_core.yolo_detector import YOLODetector
 from fcw_service.collision_worker import CollisionWorker
 
@@ -27,6 +26,8 @@ NETAPP_PORT = int(os.getenv("NETAPP_PORT", 5896))
 NETAPP_INPUT_QUEUE = int(os.getenv("NETAPP_INPUT_QUEUE", 1))
 # Event name for image error.
 IMAGE_ERROR_EVENT = str("image_error")
+
+EXTENDED_MEASURING = bool(os.getenv("EXTENDED_MEASURING", False))
 
 
 @dataclass
@@ -65,29 +66,24 @@ class Server(NetworkApplicationServer):
         # List of registered tasks.
         self.tasks: Dict[str, TaskAndWorker] = dict()
 
-        self.heart_beat_sender = HeartBeatSender()
-        heart_beat_timer = RepeatedTimer(MIDDLEWARE_REPORT_INTERVAL, self.heart_beat)
-        heart_beat_timer.start()
+        # Create Heartbeat sender
+        self.heartbeat_sender = HeartbeatSender(NETAPP_STATUS_ADDRESS, self.generate_heartbeat_data)
 
-    def heart_beat(self):
-        """Heart beat generation and sending."""
+    def generate_heartbeat_data(self):
+        """Application heartbeat data generation using queue info and latencies."""
 
         latencies = []
+        queue_occupancy = 0
+        queue_size = 0
         for task_and_worker in self.tasks.values():
+            queue_occupancy += task_and_worker.task.data_queue_occupancy()
+            queue_size += task_and_worker.task.data_queue_size()
             latencies.extend(task_and_worker.worker.latency_measurements.get_latencies())
         avg_latency = 0
         if len(latencies) > 0:
             avg_latency = float(np.mean(np.array(latencies)))
 
-        queue_size = NETAPP_INPUT_QUEUE
-        queue_occupancy = 1  # TODO: Compute for every worker?
-
-        self.heart_beat_sender.send_application_heart_beat(
-            avg_latency=avg_latency,
-            queue_size=queue_size,
-            queue_occupancy=queue_occupancy,
-            current_robot_count=len(self.tasks),
-        )
+        return generate_application_heartbeat_data(avg_latency, queue_size, queue_occupancy, len(self.tasks))
 
     def image_callback(self, sid: str, data: Dict[str, Any]) -> None:
         """Allows to receive decoded image using the websocket transport.
@@ -222,7 +218,7 @@ def main():
     detector = YOLODetector.from_dict({})
     del detector
 
-    server = Server(port=NETAPP_PORT, host="0.0.0.0")
+    server = Server(port=NETAPP_PORT, host="0.0.0.0", extended_measuring=EXTENDED_MEASURING)
 
     try:
         server.run_server()

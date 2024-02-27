@@ -72,7 +72,9 @@ def main() -> None:
 
     # Parse arguments.
     parser = ArgumentParser()
-    parser.add_argument("-s", "--stream_type", type=int, help="StreamType: 1 = JPEG, 2 = H.264, 3 = HEVC", default=StreamType.H264)
+    parser.add_argument(
+        "-s", "--stream_type", type=int, help="StreamType: 1 = JPEG, 2 = H.264, 3 = HEVC", default=StreamType.H264
+    )
     parser.add_argument("-c", "--config", type=Path, help="Collision warning config", default=CONFIG_FILE)
     parser.add_argument("--camera", type=Path, help="Camera settings", default=CAMERA_CONFIG_FILE)
     parser.add_argument("-o", "--out_csv_dir", type=str, help="Output CSV dir", default=None)
@@ -82,6 +84,7 @@ def main() -> None:
     parser.add_argument("-t", "--play_time", type=int, help="Video play time in seconds", default=5000)
     parser.add_argument("--fps", type=int, help="Video FPS", default=None)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs="?", default=TEST_VIDEO_FILE)
+    parser.add_argument("-m", "--measuring", type=bool, help="Enable extended measuring logs", default=False)
     args = parser.parse_args()
 
     global collision_warning_client, stopped
@@ -125,6 +128,7 @@ def main() -> None:
             stream_type=StreamType(args.stream_type),
             out_csv_dir=args.out_csv_dir,
             out_prefix=args.out_prefix,
+            extended_measuring=args.measuring,
         )
 
         # Rate timer for control the speed of a loop (fps).

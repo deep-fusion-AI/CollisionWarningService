@@ -37,9 +37,15 @@ System packages:
 
 Run FCW service in docker:
 ```bash
-docker run -p 5896:5896 --gpus all but5gera/fcw_service:latest 
+docker run -p 5896:5896 -p 5558:5558 --gpus all but5gera/fcw_service:latest 
 ```
-Donwload sample files:\
+Docker build:
+```bash
+git clone https://github.com/5G-ERA/CollisionWarningService.git
+cd CollisionWarningService 
+docker build -f docker/fcw_service.Dockerfile -t but5gera/fcw_service:latest .
+```
+Download sample files:\
 https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/video3.mp4 \
 https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/video3.yaml \
 https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/config.yaml 
