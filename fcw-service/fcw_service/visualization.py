@@ -1,7 +1,9 @@
 import argparse
 import logging
 import sys
+import threading
 import time
+from queue import Full, Queue
 from typing import Optional, Dict, Any
 import av
 from av.container.output import OutputContainer
@@ -23,8 +25,8 @@ def recv_array(socket: Socket, flags=0, copy=True, track=False) -> (Dict[str, An
         md = socket.recv_json(flags=flags)
         msg = socket.recv(flags=flags, copy=copy, track=track)
         buf = memoryview(msg)
-        image = numpy.frombuffer(buf, dtype=md['dtype'])
-        return md['results'], image.reshape(md['shape'])
+        image = numpy.frombuffer(buf, dtype=md["dtype"])
+        return md["results"], image.reshape(md["shape"])
     except zmq.error.Again as e:
         logger.debug("Missing visualization data!")
         return {}, None
@@ -91,25 +93,42 @@ def draw_image_trackers(
     return image
 
 
+recv_queue = Queue(5)
+context: Context = zmq.Context()
+socket: Socket = context.socket(zmq.SUB)
+socket.setsockopt(zmq.SUBSCRIBE, b"")
+socket.setsockopt(zmq.RCVTIMEO, 2000)
+
+
+def recv_results_with_images():
+    while True:
+        results, image = recv_array(socket)
+        try:
+            recv_queue.put_nowait((results, image))
+        except Full:
+            logger.info(f"Results dropped {results}")
+
+
 def main(args=None):
-    parser = argparse.ArgumentParser(description='Visualization of Forward Collision Warning Service')
+    parser = argparse.ArgumentParser(description="Visualization of Forward Collision Warning Service")
     parser.add_argument("-z", "--zmq_port", type=str, help="ZeroMQ port", default="5558")
-    parser.add_argument("-u", "--rtsp_port", type=str, help="RTSP port, address is rtsp://localhost:{rtsp_port}/video", default="8554")
+    parser.add_argument(
+        "-u", "--rtsp_port", type=str, help="RTSP port, address is rtsp://localhost:{rtsp_port}/video", default="8554"
+    )
     args = parser.parse_args()
 
-    context: Context = zmq.Context()
-    socket: Socket = context.socket(zmq.SUB)
     socket.connect("tcp://localhost:%s" % args.zmq_port)
-    socket.setsockopt(zmq.SUBSCRIBE, b"")
-    socket.setsockopt(zmq.RCVTIMEO, 2000)
 
     camera: Optional[Camera] = None
     config: Optional[Dict] = None
     output = None
 
+    recv_thread = threading.Thread(target=recv_results_with_images, daemon=True)
+    recv_thread.start()
+
     while True:
         try:
-            results, image = recv_array(socket)
+            results, image = recv_queue.get()
             if results is None or image is None:
                 cv2.destroyAllWindows()
                 continue
@@ -120,7 +139,7 @@ def main(args=None):
                     continue
                 logger.info("Initializing camera calibration")
                 camera = Camera.from_dict(config["camera_config"])
-                logo = cog_logo((64, 64))
+                # logo = cog_logo((64, 64))
                 coord_sys = draw_world_coordinate_system(camera.rectified_size, camera)
                 coord_sys.putalpha(64)
                 if type(config["config"]["fcw"].get("danger_zone")) == dict:
@@ -133,15 +152,19 @@ def main(args=None):
 
                 if output is not None:
                     output.close()
-                #TODO: Check RTSP server is running
+                # TODO: Check RTSP server is running
                 output: OutputContainer = av.open(
-                    f"rtsp://localhost:{args.rtsp_port}/video", mode="w", format="rtsp", options={'rtsp_transport': 'tcp'}, timeout=2
+                    f"rtsp://localhost:{args.rtsp_port}/video",
+                    mode="w",
+                    format="rtsp",
+                    options={"rtsp_transport": "tcp"},
+                    timeout=2,
                 )
                 output.flags |= output.flags.NONBLOCK
                 out_stream: Stream = output.add_stream("h264", 30)
                 logger.debug(out_stream.codec_context.is_open)
                 out_stream.pix_fmt = "yuv420p"
-                out_stream.options = {"preset": "ultrafast", "tune": "zerolatency", "crf": "0"}
+                out_stream.options = {"preset": "ultrafast", "tune": "zerolatency", "crf": "20"}
                 out_stream.width = image.shape[1]
                 out_stream.height = image.shape[0]
 
@@ -170,22 +193,20 @@ def main(args=None):
                     path=object_status_str["path"],
                     is_in_danger_zone=object_status_str["is_in_danger_zone"],
                     crosses_danger_zone=object_status_str["crosses_danger_zone"],
-                    time_to_collision=object_status_str["time_to_collision"]
+                    time_to_collision=object_status_str["time_to_collision"],
                 )
                 object_statuses.append(object_status)
             w1, h1 = base_undistorted.size
             compose_layers(
                 base_undistorted,  # Original image
                 (tracking_info((w1, 16), object_statuses), (0, 0)),
-                (mark_vehicles(
-                    camera.image_size,
-                    list(results["objects"]),
-                    camera,
-                    marker,
-                    marker_anchor,
-                    to_rectified=True
-                ), (0, 0)),
-                (logo, (8, 16 + 8)),
+                (
+                    mark_vehicles(
+                        camera.image_size, list(results["objects"]), camera, marker, marker_anchor, to_rectified=True
+                    ),
+                    (0, 0),
+                ),
+                # (logo, (8, 16 + 8)),
             )
             # Convert to OpenCV for display
             cv_image = np.array(base_undistorted.convert("RGB"))[..., ::-1]
@@ -199,16 +220,16 @@ def main(args=None):
             except Exception as ex:
                 config = None
                 logger.error(repr(ex))
-            #try:
-                # Display the image
+            # try:
+            # Display the image
             #    cv2.imshow("FCW", cv_image)
             #    cv2.waitKey(1)
-            #except Exception as ex:
+            # except Exception as ex:
             #    logger.debug(repr(ex))
         except KeyboardInterrupt:
             logger.info("Terminating ...")
             break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

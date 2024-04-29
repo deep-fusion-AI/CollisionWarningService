@@ -37,7 +37,7 @@ System packages:
 
 Run FCW service in docker:
 ```bash
-docker run -p 5896:5896 -p 5558:5558 --gpus all but5gera/fcw_service:latest 
+docker run -p 5896:5896 -p 8554:8554 --network host --gpus all but5gera/fcw_service:latest 
 ```
 Docker build:
 ```bash
@@ -75,7 +75,7 @@ pip install fcw-core fcw-client fcw-service
 
 For CUDA accelerated version, on Windows may be needed e.g.:
 ```bash
-pip install --upgrade --force-reinstall torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu118
+pip install --upgrade --force-reinstall torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cu123
 ```
 It depends on the version of CUDA on the system [https://pytorch.org/get-started/locally/](https://pytorch.org/get-started/locally/).
 
@@ -107,9 +107,7 @@ Relevant configurations are in `videos/video3.yaml` - camera config, and `config
 The FCW service can be started in docker ([docker/fcw_service.Dockerfile](docker/fcw_service.Dockerfile)).
 The image can be built:
 ```bash
-cd ..
-cd fcw-core/docker 
-docker build -f fcw_service.Dockerfile -t but5gera/fcw_service:latest . 
+docker build -f docker/fcw_service.Dockerfile -t but5gera/fcw_service:latest . 
 ```
 or the image directly from the Docker Hub can be used.
  
@@ -155,30 +153,32 @@ fcw_client_python -c config/config.yaml --camera videos/video3.yaml videos/video
 
 ## Running remote visualization
 
-The visualisation should be enabled with config arguments during initialization command (`CollisionWorker` created 
-with `viz` parameter set to `True` (ZeroMQ port can be also configured)).
+The visualisation should be enabled (enabled by default) with config arguments during initialization command 
+(`CollisionWarningClient` or `CollisionWorker` created with `viz` parameter set to `True` (ZeroMQ port can be also 
+configured)).
 
-If the FCW service has been started, **run RTSP server first**, e.g. https://github.com/bluenviron/mediamtx
-on address: rtsp://localhost:8554 (TCP port 8554) and then:
+If the FCW service has been started, **run RTSP server first** (on the same computer where the service is running), 
+e.g. using docker and https://github.com/bluenviron/mediamtx on address: rtsp://localhost:8554 (TCP port 8554):
 
 ```bash
 docker run --rm -it -p 8554:8554 -e MTX_PROTOCOLS=tcp bluenviron/mediamtx:latest-ffmpeg
 ```
 
-In other terminal run
+In other terminal (on the same computer where the service is running) run 
+(custom RTSP port can be set by --rtsp_port parameter, and custom ZeroMQ port by --zmq_port parameter):
 
 ```bash
 cd fcw-service/fcw_service
 fcw_visualization
 ```
 
-or executing 
+or executing :
 ```bash
 cd fcw-service/fcw_service
 python3 visualization.py
 ```
 
-You can view video, e.g. (localhost can be replaced with server address):
+You can view video, e.g. (localhost can be replaced with public server address):
 
 ```bash
 ffplay rtsp://localhost:8554/video
@@ -193,6 +193,11 @@ ffplay rtsp://localhost:8554/video
 ### Run the example
 
 ## Notes
+
+If poetry lock hangs:
+```bash
+export PYTHON_KEYRING_BACKEND=keyring.backends.null.Keyring
+```
 
 We use slightly modified version of SORT tracker from [abewley](https://github.com/abewley/sort) GitHub repository.
 

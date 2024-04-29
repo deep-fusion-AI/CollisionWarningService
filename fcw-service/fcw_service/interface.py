@@ -43,7 +43,6 @@ class Server(NetworkApplicationServer):
 
     def __init__(
         self,
-        *args,
         **kwargs,
     ) -> None:
         """Constructor.
@@ -59,7 +58,6 @@ class Server(NetworkApplicationServer):
                 "image_hevc": CallbackInfoServer(ChannelType.HEVC, self.image_callback),
                 "image_jpeg": CallbackInfoServer(ChannelType.JPEG, self.image_callback),
             },
-            *args,
             **kwargs,
         )
 
@@ -94,11 +92,18 @@ class Server(NetworkApplicationServer):
                 (data["timestamp"]).
         """
 
-        eio_sid = self._sio.manager.eio_sid_from_sid(sid, DATA_NAMESPACE)
+        eio_sid = self.get_eio_sid_of_data(sid)
 
         if eio_sid not in self.tasks:
             logger.error(f"Non-registered client {eio_sid} tried to send data")
             self.send_data({"message": "Non-registered client tried to send data"}, DATA_ERROR_EVENT, sid=sid)
+            self.disconnect(sid)
+            return
+
+        if not self.tasks[eio_sid].worker.is_alive():
+            logger.error(f"Worker is not alive, eio_sid {eio_sid}, sid {sid}")
+            self.send_data({"message": f"Worker is not alive, eio_sid {eio_sid}, sid {sid}"}, DATA_ERROR_EVENT, sid=sid)
+            self.disconnect(sid)
             return
 
         task = self.tasks[eio_sid].task
@@ -150,13 +155,19 @@ class Server(NetworkApplicationServer):
             try:
                 # Create worker.
                 worker = CollisionWorker(
-                    image_queue,
-                    lambda results: self.send_data(data=results, event="results", sid=self.get_sid_of_data(eio_sid)),
-                    config,
-                    camera_config,
-                    fps,
-                    viz,
-                    viz_zmq_port,
+                    image_queue=image_queue,
+                    send_function=lambda results: self.send_data(
+                        data=results, event="results",
+                        sid=self.get_sid_of_data(eio_sid)
+                    ),
+                    config=config,
+                    camera_config=camera_config,
+                    fps=fps,
+                    send_error_function=lambda message: self.send_data(
+                        data=message, event=DATA_ERROR_EVENT, sid=self.get_sid_of_data(eio_sid)
+                    ),
+                    viz=viz,
+                    viz_zmq_port=viz_zmq_port,
                     name=f"Collision Worker {eio_sid}",
                     daemon=True,
                 )
@@ -186,6 +197,15 @@ class Server(NetworkApplicationServer):
             f"Control command applied, eio_sid {eio_sid}, sid {sid}, results sid"
             f" {self.get_sid_of_data(eio_sid)}, command {command}"
         )
+
+    def disconnect(self, sid: str) -> None:
+        """Disconnects the client from DATA_NAMESPACE by sid.
+
+        Args:
+            sid (str): Namespace sid.
+        """
+
+        self._sio.disconnect(sid, DATA_NAMESPACE)
 
     def disconnect_callback(self, sid: str) -> None:
         """Called with client disconnection - deletes task and worker.

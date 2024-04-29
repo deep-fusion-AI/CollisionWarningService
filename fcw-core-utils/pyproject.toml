@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fcw-core-utils"
-version = "0.11.0"
+version = "0.12.0"
 description = "Early collision warning Network Application for Transportation use case - core utils part"
 authors = ["Petr Kleparnik <p.kleparnik@cognitechna.cz>", "Roman Juranek <r.juranek@cognitechna.cz>"]
 readme = "README.md"
@@ -11,9 +11,12 @@ packages = [{include = "fcw_core_utils"}]
 python = ">=3.8"
 opencv-python = ">=4.8"
 filterpy = ">=1.4.5"
-shapely = ">=2.0.3"
+shapely = ">=2.0.4"
 matplotlib = ">=3.7.5"
 
 [build-system]
 requires = ["poetry-core"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.black]
+line-length = 120

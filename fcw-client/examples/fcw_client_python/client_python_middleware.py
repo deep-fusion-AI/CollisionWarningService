@@ -85,6 +85,9 @@ def main() -> None:
     parser.add_argument("--fps", type=int, help="Video FPS", default=None)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs="?", default=TEST_VIDEO_FILE)
     parser.add_argument("-m", "--measuring", type=bool, help="Enable extended measuring logs", default=False)
+    parser.add_argument("--viz", type=bool, help="Whether to enable remote visualization", default=True)
+    parser.add_argument("--viz_zmq_port", type=int, help="Port of the ZMQ visualization server", default=5558)
+    parser.add_argument("--stats", type=bool, help="Store output data sizes", default=True)
     args = parser.parse_args()
 
     global collision_warning_client, stopped
@@ -125,9 +128,10 @@ def main() -> None:
                 robot_id=MIDDLEWARE_ROBOT_ID,
             ),
             fps=fps,
+            viz=args.viz,
+            viz_zmq_port=args.viz_zmq_port,
             stream_type=StreamType(args.stream_type),
-            out_csv_dir=args.out_csv_dir,
-            out_prefix=args.out_prefix,
+            stats=args.stats,
             extended_measuring=args.measuring,
         )
 

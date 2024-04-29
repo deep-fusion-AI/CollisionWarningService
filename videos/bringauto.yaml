@@ -2,7 +2,7 @@
 
 # Image resolution
 image_size: [1280, 720]  # (w,h) in pixels
-rectified_size: [400, 232]
+rectified_size: [854, 480]
 
 # 3x3 Camera matrix
 K:

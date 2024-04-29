@@ -27,6 +27,7 @@ class CollisionWorker(Thread):
         config: Dict,
         camera_config: Dict,
         fps: float,
+        send_error_function: Callable[[Dict[str, Any]], None] = None,
         viz: bool = False,
         viz_zmq_port: int = 5558,
         **kw,
@@ -39,6 +40,7 @@ class CollisionWorker(Thread):
             config (Dict): FCW config.
             camera_config (Dict): Camera config.
             fps (float): Framerate.
+            send_error_function (Callable[[Dict], None]): Callback used to send errors.
             viz (bool): Enable visualization?
             viz_zmq_port (int): Visualization ZeroMQ port.
             **kw: Thread arguments.
@@ -49,6 +51,7 @@ class CollisionWorker(Thread):
         self._stop_event = Event()
         self.image_queue = image_queue
         self._send_function = send_function
+        self._send_error_function = send_error_function
         self._frame_id = 0
         self.latency_measurements: LatencyMeasurements = LatencyMeasurements()
         self._viz = viz
@@ -85,7 +88,7 @@ class CollisionWorker(Thread):
         del self._detector
 
     def run(self) -> None:
-        """FWC worker loop. Periodically reads images from python internal queue process them."""
+        """FCW worker loop. Periodically reads images from python internal queue process them."""
 
         logger.info(f"{self.name} thread is running.")
 
@@ -110,12 +113,17 @@ class CollisionWorker(Thread):
                 # Send results via the provided callback.
                 self._send_function(results)
 
+                self.latency_measurements.store_latency(time.perf_counter_ns() - metadata["recv_timestamp"])
+
                 if self._viz:
                     # If visualisation is enabled, send image with results over ZeroMQ.
                     self._send_image_with_results(image, results)
 
             except Exception as ex:
                 logger.error(f"Exception with image processing ({type(ex)}): {repr(ex)}")
+                if self._send_error_function:
+                    self._send_error_function({"message": f"Exception with image processing ({type(ex)}): {repr(ex)}"})
+                raise ex
 
         logger.info(f"{self.name} thread is stopping.")
 
@@ -200,16 +208,12 @@ class CollisionWorker(Thread):
                 object_statuses[i].path = [pts for pts in object_statuses[i].path.coords]
             object_statuses = [asdict(object_status) for object_status in object_statuses]
 
-            send_timestamp = time.perf_counter_ns()
-
-            self.latency_measurements.store_latency(send_timestamp - metadata["recv_timestamp"])
-
             return {
                 "timestamp": metadata.get("timestamp", 0),
                 "recv_timestamp": metadata.get("recv_timestamp", 0),
                 "timestamp_before_process": metadata["timestamp_before_process"],
                 "timestamp_after_process": metadata["timestamp_after_process"],
-                "send_timestamp": send_timestamp,
+                "send_timestamp": time.perf_counter_ns(),
                 "dangerous_detections": dangerous_detections,
                 "objects": object_statuses,
             }

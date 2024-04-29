@@ -1,6 +1,10 @@
 # Intrinsic parameters
 image_size: [962, 720]  # (w,h) [px]
 rectified_size: [400, 300]  # (w,h) [px]
+#image_size: [3840, 2160]  # (w,h) [px]
+#rectified_size: [3840, 2160]  # (w,h) [px]
+#image_size: [1920, 1080]  # (w,h) [px]
+#rectified_size: [1920, 1080]  # (w,h) [px]
 
 # Estimated horizontal FOV is 60 deg -> 1321 px
 K:

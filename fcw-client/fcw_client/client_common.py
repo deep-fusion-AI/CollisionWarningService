@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import csv
 import logging
 import os
 import statistics
@@ -18,6 +17,7 @@ from era_5g_client.client_base import NetAppClientBase
 from era_5g_client.dataclasses import MiddlewareInfo
 from era_5g_interface.channels import CallbackInfoClient, ChannelType
 from era_5g_interface.interface_helpers import HEARTBEAT_CLIENT_EVENT
+from era_5g_interface.measuring import Measuring
 from fcw_core_utils.geometry import Camera
 
 logger = logging.getLogger(__name__)
@@ -35,12 +35,11 @@ HEARTBEAT_ADDRESS = str(os.getenv("HEARTBEAT_ADDRESS", "http://localhost:5898"))
 class ResultsReader:
     """Default class for processing FCW results."""
 
-    def __init__(self, out_csv_dir: str = None, out_prefix: str = None) -> None:
+    def __init__(self, extended_measuring: bool = False) -> None:
         """Constructor.
 
         Args:
-            out_csv_dir (str, optional): Dir for CSV timestamps stats.
-            out_prefix (str, optional): Filename prefix for CSV timestamps stats.
+            extended_measuring (bool): Enable logging of measuring.
         """
 
         self.delays = []
@@ -57,8 +56,17 @@ class ResultsReader:
                 "timestamp_after_process",
             ]
         ]
-        self.out_csv_dir = out_csv_dir
-        self.out_prefix = out_prefix
+
+        measuring_items = {
+            "key_timestamp": 0,
+            "final_timestamp": 0,
+            "worker_recv_timestamp": 0,
+            "worker_before_process_timestamp": 0,
+            "worker_after_process_timestamp": 0,
+            "worker_send_timestamp": 0,
+        }
+        prefix = f"client-final"
+        self.measuring = Measuring(measuring_items, enabled=extended_measuring, filename_prefix=prefix)
 
     def stats(self, send_frames_count: int) -> None:
         """Print timestamps stats and can write them to CSV file.
@@ -96,12 +104,6 @@ class ResultsReader:
                 f"min: {min(self.delays_process) * 1.0e-9:.3f}s "
                 f"max: {max(self.delays_process) * 1.0e-9:.3f}s"
             )
-            if self.out_csv_dir is not None:
-                out_csv_filename = f"{self.out_prefix}"
-                out_csv_filepath = os.path.join(self.out_csv_dir, out_csv_filename + ".csv")
-                with open(out_csv_filepath, "w", newline="") as csv_file:
-                    csv_writer = csv.writer(csv_file)
-                    csv_writer.writerows(self.timestamps)
 
     def get_results(self, results: Dict[str, Any]) -> None:
         """Callback which process the results from the FCW service.
@@ -124,26 +126,45 @@ class ResultsReader:
 
         # Process timestamps.
         if "timestamp" in results:
-            timestamp = results["timestamp"]
+            key_timestamp = results["timestamp"]
             recv_timestamp = results["recv_timestamp"]
             send_timestamp = results["send_timestamp"]
             timestamp_before_process = results["timestamp_before_process"]
             timestamp_after_process = results["timestamp_after_process"]
 
+            # Log the final recv time of this node
+            self.measuring.log_measuring(key_timestamp, "final_timestamp", results_timestamp)
+
+            # Log other misc timestamps from the received message
+            self.measuring.log_measuring(key_timestamp, "worker_recv_timestamp", recv_timestamp)
+            self.measuring.log_measuring(
+                key_timestamp,
+                "worker_before_process_timestamp",
+                timestamp_before_process,
+            )
+            self.measuring.log_measuring(
+                key_timestamp,
+                "worker_after_process_timestamp",
+                timestamp_after_process,
+            )
+            self.measuring.log_measuring(key_timestamp, "worker_send_timestamp", send_timestamp)
+
+            self.measuring.store_measuring(key_timestamp)
+
             if DEBUG_PRINT_DELAY:
                 logger.info(
                     f"Result number {len(self.timestamps)}"
-                    f", delay: {(results_timestamp - timestamp) * 1.0e-9:.3f}s"
-                    # f", recv frame delay: {(recv_timestamp - timestamp) * 1.0e-9:.3f}s"
+                    f", delay: {(results_timestamp - key_timestamp) * 1.0e-9:.3f}s"
+                    # f", recv frame delay: {(recv_timestamp - key_timestamp) * 1.0e-9:.3f}s"
                 )
-                self.delays.append((results_timestamp - timestamp))
-                self.delays_recv.append((recv_timestamp - timestamp))
-                self.delays_send.append((send_timestamp - timestamp))
+                self.delays.append((results_timestamp - key_timestamp))
+                self.delays_recv.append((recv_timestamp - key_timestamp))
+                self.delays_send.append((send_timestamp - key_timestamp))
                 self.delays_process.append((timestamp_after_process - timestamp_before_process))
 
             self.timestamps.append(
                 [
-                    timestamp,
+                    key_timestamp,
                     recv_timestamp,
                     send_timestamp,
                     results_timestamp,
@@ -184,8 +205,6 @@ class CollisionWarningClient:
         viz_zmq_port: int = 5558,
         results_callback: Optional[Callable] = None,
         stream_type: Optional[StreamType] = StreamType.H264,
-        out_csv_dir: Optional[str] = None,
-        out_prefix: Optional[str] = "fcw_test_",
         stats: bool = False,
         extended_measuring: bool = False,
     ) -> None:
@@ -202,8 +221,6 @@ class CollisionWarningClient:
             viz_zmq_port (int): Port of the ZMQ server. Default to 5558.
             results_callback (Callable, optional): Callback for receiving results. Default to ResultsReader.get_results.
             stream_type (StreamType, optional): Stream type JPEG or H264 or HEVC. Default to H264.
-            out_csv_dir (str, optional): Dir for CSV timestamps stats. Default to None.
-            out_prefix (str, optional): Filename prefix for CSV timestamps stats. Default to "fcw_test_".
             stats (bool): Store output data sizes.
             extended_measuring (bool): Enable logging of measuring.
         """
@@ -222,7 +239,7 @@ class CollisionWarningClient:
             self.fps = 30
         self.results_callback = results_callback
         if self.results_callback is None:
-            self.results_viewer = ResultsReader(out_csv_dir=out_csv_dir, out_prefix=out_prefix)
+            self.results_viewer = ResultsReader(extended_measuring=extended_measuring)
             self.results_callback = self.results_viewer.get_results
         self.stream_type = stream_type
         self.frame_id = 0

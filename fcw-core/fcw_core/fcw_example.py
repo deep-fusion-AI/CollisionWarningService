@@ -11,7 +11,7 @@ import time
 import csv
 import logging
 import sys
-logging.basicConfig(stream=sys.stdout, level=logging.INFO)
+logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("FCW example")
 
 from fcw_core_utils.collision import get_reference_points, ForwardCollisionGuard
