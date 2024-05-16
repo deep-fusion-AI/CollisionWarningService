@@ -11,6 +11,9 @@ import time
 import csv
 import logging
 import sys
+
+from era_5g_interface.measuring import Measuring
+
 logging.basicConfig(stream=sys.stdout, level=logging.INFO, format="%(asctime)s [%(levelname)s] %(name)s: %(message)s")
 logger = logging.getLogger("FCW example")
 
@@ -34,8 +37,6 @@ def parse_arguments():
     parser.add_argument("--camera", type=FileType("r"), required=True, help="Camera settings")
     parser.add_argument("-o", "--output", type=str, help="Output video")
     parser.add_argument("--viz", action="store_true")
-    parser.add_argument("--out_csv_dir", type=str, help="Output CSV dir", default=None)
-    parser.add_argument("-p", "--out_prefix", type=str, help="Prefix of output csv file with measurements", default="fcw_example_test_")
     parser.add_argument("-t", "--play_time", type=int, help="Video play time in seconds", default=60)
     parser.add_argument("--fps", type=int, help="Video FPS", default=None)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)")
@@ -105,12 +106,16 @@ def main(args=None):
         marker, marker_anchor = vehicle_marker_image(scale=3)
 
     delays = []
-    timestamps = [
-        ["start_timestamp_ns",
-         "recv_timestamp_ns",
-         "send_timestamp_ns",
-         "end_timestamp_ns"]
-    ]
+    measuring_items = {
+        "key_timestamp": 0,
+        "final_timestamp": 0,
+        "worker_recv_timestamp": 0,
+        "worker_before_process_timestamp": 0,
+        "worker_after_process_timestamp": 0,
+        "worker_send_timestamp": 0,
+    }
+    prefix = f"client-final"
+    measuring = Measuring(measuring_items, enabled=True, filename_prefix=prefix)
 
     rate_timer = RateTimer(rate=fps, iteration_miss_warning=True)
 
@@ -121,15 +126,12 @@ def main(args=None):
         if not ret or img is None:
             logger.info("Video ended")
             break
+        key_timestamp = time.perf_counter_ns()
 
-        time0 = time.time_ns()
         img_undistorted = camera.rectify_image(img)
-        time1 = time.time_ns()
-        time_elapsed_s = (time1 - time0) * 1.0e-9
-        logger.info(f"rectify_image time: {time_elapsed_s:.3f}")
-
-        time0 = time.time_ns()
-
+        time0 = time.perf_counter_ns()
+        measuring.log_measuring(key_timestamp, "worker_recv_timestamp", time0)
+        measuring.log_measuring(key_timestamp, "worker_before_process_timestamp", time0)
         # Detect object in image
         detections = detector.detect(img_undistorted)
         # Get bounding boxes as numpy array
@@ -149,17 +151,13 @@ def main(args=None):
         # Get list of current offenses
         dangerous_objects = guard.dangerous_objects()
 
-        time1 = time.time_ns()
+        time1 = time.perf_counter_ns()
+        measuring.log_measuring(key_timestamp, "worker_after_process_timestamp", time1)
+        measuring.log_measuring(key_timestamp, "worker_send_timestamp", time1)
         logger.info(f"Delay: {(time1 - time0) * 1.0e-9:.3f}s")
         delays.append((time1 - time0))
-        timestamps.append(
-            [
-                time0,
-                time0,
-                time1,
-                time1
-            ]
-        )
+        measuring.log_measuring(key_timestamp, "final_timestamp", time1)
+        measuring.store_measuring(key_timestamp)
 
         if render_output:
             # Visualization
@@ -211,13 +209,6 @@ def main(args=None):
     end_time = time.time_ns()
     logger.info(f"Total streaming time: {(end_time - start_time) * 1.0e-9:.3f}s")
     logger.info(f"Delay median: {statistics.median(delays) * 1.0e-9:.3f}s")
-
-    if args.out_csv_dir is not None:
-        out_csv_filename = f'{args.out_prefix}'
-        out_csv_filepath = os.path.join(args.out_csv_dir, out_csv_filename + ".csv")
-        with open(out_csv_filepath, "w", newline='') as csv_file:
-            csv_writer = csv.writer(csv_file)
-            csv_writer.writerows(timestamps)
 
     try:
         cv2.destroyAllWindows()

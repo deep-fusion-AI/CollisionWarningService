@@ -46,7 +46,7 @@ cd CollisionWarningService
 docker build -f docker/fcw_service.Dockerfile -t but5gera/fcw_service:latest .
 ```
 Download sample files:\
-https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/video3.mp4 \
+https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/videos/video3.mp4 \
 https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/video3.yaml \
 https://raw.githubusercontent.com/5G-ERA/CollisionWarningService/main/config/config.yaml 
 
@@ -121,7 +121,7 @@ docker run -p 5896:5896 -p 8554:8554 --network host --gpus all but5gera/fcw_serv
 
 #### Local startup
 
-The FCW service can also be started locally using [fcw-service/interface.py](fcw/service/interface.py), 
+The FCW service can also be started locally using [fcw-service/interface.py](fcw-service/fcw_service/interface.py), 
 but the fcw-service package must be installed and the NETAPP_PORT environment 
 variable should be set (default is 5896).
 Run FCW service in same virtual environment as standalone example:

@@ -35,7 +35,7 @@ CONFIG_FILE = Path("../../../config/config.yaml")
 CAMERA_CONFIG_FILE = Path("../../../videos/video3.yaml")
 # CAMERA_CONFIG_FILE = Path("../../../videos/bringauto.yaml")
 
-# stopped flag for SIGTERM handler (stopping video frames sending).
+# Stopped flag for SIGTERM handler (stopping video frames sending).
 stopped = False
 collision_warning_client: Optional[CollisionWarningClient] = None
 
@@ -66,10 +66,6 @@ def main() -> None:
     )
     parser.add_argument("-c", "--config", type=Path, help="Collision warning config", default=CONFIG_FILE)
     parser.add_argument("--camera", type=Path, help="Camera settings", default=CAMERA_CONFIG_FILE)
-    parser.add_argument("-o", "--out_csv_dir", type=str, help="Output CSV dir", default=None)
-    parser.add_argument(
-        "-p", "--out_prefix", type=str, help="Prefix of output csv file with measurements", default=None
-    )
     parser.add_argument("-t", "--play_time", type=int, help="Video play time in seconds", default=5000)
     parser.add_argument("--fps", type=int, help="Video FPS", default=None)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs="?", default=TEST_VIDEO_FILE)

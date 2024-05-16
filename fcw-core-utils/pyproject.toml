@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "fcw-core-utils"
-version = "0.12.0"
+version = "0.12.1"
 description = "Early collision warning Network Application for Transportation use case - core utils part"
 authors = ["Petr Kleparnik <p.kleparnik@cognitechna.cz>", "Roman Juranek <r.juranek@cognitechna.cz>"]
 readme = "README.md"

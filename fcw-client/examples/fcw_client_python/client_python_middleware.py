@@ -26,7 +26,7 @@ logger = logging.getLogger("FCW client python")
 # Testing video file.
 TEST_VIDEO_FILE = str("../../../videos/video3.mp4")
 # TEST_VIDEO_FILE = str("rtsp://127.0.0.1:8554/webcam.h264")
-# TEST_VIDEO_FILE = str("../../../videos/bringauto_2023-03-20.mp4")
+# TEST_VIDEO_FILE = str("../../../videos/bringauto_2023-03-20_short.mp4")
 
 # Testing configuration of the algorithm.
 CONFIG_FILE = Path("../../../config/config.yaml")
@@ -46,7 +46,9 @@ MIDDLEWARE_USER = str(os.getenv("MIDDLEWARE_USER", "00000000-0000-0000-0000-0000
 # Middleware password.
 MIDDLEWARE_PASSWORD = str(os.getenv("MIDDLEWARE_PASSWORD", "password"))
 # Middleware Network Application ID (task ID).
-MIDDLEWARE_TASK_ID = str(os.getenv("MIDDLEWARE_TASK_ID", "00000000-0000-0000-0000-000000000000"))
+MIDDLEWARE_TASK_ID = str(
+    os.getenv("FCW_MIDDLEWARE_TASK_ID", str(os.getenv("MIDDLEWARE_TASK_ID", "00000000-0000-0000-0000-000000000000")))
+)
 # Middleware robot ID (robot ID).
 MIDDLEWARE_ROBOT_ID = str(os.getenv("MIDDLEWARE_ROBOT_ID", "00000000-0000-0000-0000-000000000000"))
 
@@ -77,14 +79,10 @@ def main() -> None:
     )
     parser.add_argument("-c", "--config", type=Path, help="Collision warning config", default=CONFIG_FILE)
     parser.add_argument("--camera", type=Path, help="Camera settings", default=CAMERA_CONFIG_FILE)
-    parser.add_argument("-o", "--out_csv_dir", type=str, help="Output CSV dir", default=None)
-    parser.add_argument(
-        "-p", "--out_prefix", type=str, help="Prefix of output csv file with measurements", default=None
-    )
     parser.add_argument("-t", "--play_time", type=int, help="Video play time in seconds", default=5000)
     parser.add_argument("--fps", type=int, help="Video FPS", default=None)
     parser.add_argument("source_video", type=str, help="Video stream (file or url)", nargs="?", default=TEST_VIDEO_FILE)
-    parser.add_argument("-m", "--measuring", type=bool, help="Enable extended measuring logs", default=False)
+    parser.add_argument("-m", "--measuring", type=bool, help="Enable extended measuring logs", default=True)
     parser.add_argument("--viz", type=bool, help="Whether to enable remote visualization", default=True)
     parser.add_argument("--viz_zmq_port", type=int, help="Port of the ZMQ visualization server", default=5558)
     parser.add_argument("--stats", type=bool, help="Store output data sizes", default=True)

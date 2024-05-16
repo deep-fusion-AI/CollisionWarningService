@@ -272,6 +272,7 @@ class CollisionWarningClient:
                 {"results": CallbackInfoClient(ChannelType.JSON, self.results_callback)},
                 logging_level=logging.getLogger().level,
                 stats=stats,
+                extended_measuring=extended_measuring,
             )
             logger.info(f"Register with netapp_info: {netapp_info}")
             self.client.connect_to_middleware(netapp_info.middleware_info)
