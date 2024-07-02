@@ -65,6 +65,12 @@ def main(args=None):
     shape = height, width
     logger.info("Video {W}x{H}, {fps} FPS".format(W=width, H=height, fps=fps))
 
+    if args.viz:
+        try:
+            cv2.namedWindow("FCW")
+        except Exception as ex:
+            logger.debug(repr(ex))
+
     # Init object detector
     detector = YOLODetector.from_dict(config_dict.get("detector", {}))
 
@@ -89,12 +95,6 @@ def main(args=None):
 
     if args.output is not None:
         output = cv2.VideoWriter(args.output, cv2.VideoWriter_fourcc(*"MP4V"), fps, camera.image_size)
-
-    if args.viz:
-        try:
-            cv2.namedWindow("FCW")
-        except Exception as ex:
-            logger.debug(repr(ex))
 
     if render_output:
         # Prepare static stuff for visualization
