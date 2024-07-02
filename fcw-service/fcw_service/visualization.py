@@ -1,3 +1,4 @@
+import cv2
 import argparse
 import logging
 import sys
@@ -5,10 +6,16 @@ import threading
 import time
 from queue import Full, Queue
 from typing import Optional, Dict, Any
+
+USE_DISPLAY = 1
+
+if USE_DISPLAY:
+    cv2.namedWindow("Visualization")
+
 import av
 from av.container.output import OutputContainer
 from av.stream import Stream
-import cv2
+
 import numpy
 import zmq
 from zmq import Socket, Context
@@ -17,6 +24,7 @@ logging.basicConfig(stream=sys.stdout, level=logging.INFO)
 logger = logging.getLogger("FCW visualization")
 
 from fcw_core.vizualization import *
+
 
 
 def recv_array(socket: Socket, flags=0, copy=True, track=False) -> (Dict[str, Any], np.ndarray):
@@ -117,21 +125,25 @@ def main(args=None):
     )
     args = parser.parse_args()
 
+    
+    
     socket.connect("tcp://localhost:%s" % args.zmq_port)
-
+    print("URI tcp://localhost:%s" % args.zmq_port)
     camera: Optional[Camera] = None
     config: Optional[Dict] = None
     output = None
 
     recv_thread = threading.Thread(target=recv_results_with_images, daemon=True)
     recv_thread.start()
-
+    print("Start FCW_Visualization !")
+    
     while True:
         try:
             results, image = recv_queue.get()
             if results is None or image is None:
-                cv2.destroyAllWindows()
+                #cv2.destroyAllWindows()
                 continue
+
             if not config or config != results["config"]:
                 config = results["config"]
                 if "camera_config" not in config:
@@ -220,12 +232,15 @@ def main(args=None):
             except Exception as ex:
                 config = None
                 logger.error(repr(ex))
-            # try:
-            # Display the image
-            #    cv2.imshow("FCW", cv_image)
-            #    cv2.waitKey(1)
-            # except Exception as ex:
-            #    logger.debug(repr(ex))
+            
+            if USE_DISPLAY:
+                try:
+                # Display the image
+                    cv2.imshow("Visualization", cv_image)
+                    cv2.waitKey(1)
+                except Exception as ex:
+                    logger.debug(repr(ex))
+            
         except KeyboardInterrupt:
             logger.info("Terminating ...")
             break
