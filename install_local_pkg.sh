@@ -1,4 +1,5 @@
-LOCAL_PYTHON3_SITE_PKG="~/.local/lib/python3.10/site-packages"
+#! /bin/bash
+LOCAL_PYTHON3_SITE_PKG="/home/autoroad/.local/lib/python3.10/site-packages"
 
 FCW_CORE=$PWD"/fcw-core/fcw_core"
 FCW_SERVICE=$PWD"/fcw-service/fcw_service"
@@ -11,10 +12,10 @@ echo $FCW_SERVICE
 echo $FCW_CLIENT
 
 # make link
-cd $LOCAL_PYTHON3_SITE_PKG
-ln -s $FCW_CORE ./
-ln -s $FCW_SERVICE ./
-ln -s $FCW_CLIENT ./
+ln -s $FCW_CORE $LOCAL_PYTHON3_SITE_PKG
+ln -s $FCW_SERVICE $LOCAL_PYTHON3_SITE_PKG
+ln -s $FCW_CLIENT $LOCAL_PYTHON3_SITE_PKG
+
 
 # check
-ls -al | grep fcw
+ls "$LOCAL_PYTHON3_SITE_PKG" -al | grep fcw
