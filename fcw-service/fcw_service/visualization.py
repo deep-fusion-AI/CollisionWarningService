@@ -119,16 +119,17 @@ def recv_results_with_images():
 
 def main(args=None):
     parser = argparse.ArgumentParser(description="Visualization of Forward Collision Warning Service")
+    parser.add_argument("--host", type=str, help="ZeroMQ Host uri", default="localhost")
     parser.add_argument("-z", "--zmq_port", type=str, help="ZeroMQ port", default="5558")
     parser.add_argument(
         "-u", "--rtsp_port", type=str, help="RTSP port, address is rtsp://localhost:{rtsp_port}/video", default="8554"
     )
     args = parser.parse_args()
 
-    
-    
-    socket.connect("tcp://localhost:%s" % args.zmq_port)
-    print("URI tcp://localhost:%s" % args.zmq_port)
+        
+    socket.connect("tcp://%s:%s" % (args.host, args.zmq_port))
+    logger.info("URI tcp://%s:%s" % (args.host, args.zmq_port))
+
     camera: Optional[Camera] = None
     config: Optional[Dict] = None
     output = None
